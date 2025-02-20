@@ -1,8 +1,8 @@
-import express from "express";
-import cors from "cors";
-import dotenv from "dotenv";
-import bcrypt from "bcrypt";
-import { Pool } from "pg";
+const express = require("express");
+const cors = require("cors");
+const dotenv = require("dotenv");
+const bcrypt = require("bcrypt");
+const { Pool } = require("pg");
 
 dotenv.config();
 const app = express();

@@ -22,29 +22,34 @@ export default function Register() {
 
     const handleSubmit = async (e: React.FormEvent) => {
         e.preventDefault()
+        setError(null)
+        setMessage("")
+
         try {
-            await registerUser(
+            const result = await registerUser(
                 formData.name,
                 formData.surname,
                 formData.email,
                 formData.password
             )
+            console.log("Registration result:", result) // Log successful response
             setMessage(
                 "Account created successfully! Redirecting to login page..."
             )
-            setError(null)
+            // Optional: Redirect after a delay
+            setTimeout(() => (window.location.href = "/login"), 2000)
         } catch (err) {
+            console.error("Registration error:", err) // Log the error
             if (err instanceof Error) {
                 setError(err.message)
             } else {
                 setError("An unknown error occurred")
             }
-            setMessage("")
         }
     }
 
     return (
-        <main className='bg-charcoalBlack py-20 lg:py-24 flex justify-center items-center '>
+        <main className='bg-charcoalBlack py-20 lg:py-24 flex justify-center items-center'>
             <section className='p-6 max-w-[480px] bg-deepGray rounded-2xl md:p-8 lg:p-12 flex flex-col items-center justify-center shadow-lg'>
                 <Image
                     src='/images/weblogo.png'
@@ -153,7 +158,7 @@ export default function Register() {
                         type='submit'
                         className={
                             "btn-primary font-author font-bold text-[14px] leading-4 bg-burntAmber rounded-[8px] py-2 px-4 w-full text-warmBeige mb-4 md:text-[16px] md:leading-5 md:py-2.5 md:px-5 lg:text-lg lg:leading-6 lg:py-3 lg:px-6 " +
-                            "hover:bg-deepCopper active:scale-95 transform duration-100 "
+                            "hover:bg-deepCopper active:scale-95 transform duration-100"
                         }>
                         Register
                     </button>
@@ -168,7 +173,7 @@ export default function Register() {
                     </Link>
                 </p>
                 {message && (
-                    <p className='text-center mt-4 text-red-500'>{message}</p>
+                    <p className='text-center mt-4 text-green-500'>{message}</p>
                 )}
                 {error && (
                     <p className='text-center mt-4 text-red-500'>{error}</p>

@@ -20,7 +20,7 @@ const Footer = () => {
     return (
         <footer className='w-full bg-charcoalBlack'>
             <div className='p-6 bg-deepGray md:p-8 lg:py-12 lg:px-16'>
-                <div className='grid mx-auto container gap-6 md:grid-cols-2 md:gap-x-4 md:gap-y-6 lg:grid-cols-4 lg:gap-8 border-b border-charcoalBlack'>
+                <div className='grid mx-auto container gap-6 md:grid-cols-2 md:gap-x-4 md:gap-y-6 lg:grid-cols-4 lg:gap-8 border-b border-charcoalBlack pb-2'>
                     {/* Column 1: Logo & Description */}
                     <div>
                         <Image
@@ -125,6 +125,11 @@ const Footer = () => {
                         aria-label='Copyright Notice'>
                         © 2024 Inkwell Bookstore. All rights reserved.
                     </p>
+                </div>
+                <div className='flex justify-end'>
+                    <span className='font-generalSans text-[8px] text-mutedSand md:text-[10px] lg:text-[12px] text-right'>
+                        Created By Jawed-lol
+                    </span>
                 </div>
             </div>
         </footer>

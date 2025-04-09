@@ -4,7 +4,6 @@ import { motion, AnimatePresence } from "framer-motion"
 import { XIcon } from "lucide-react"
 import Link from "next/link"
 import Searchbar from "@/components/navbar/searchbar"
-import { Button } from "@/components/ui/button"
 import { useAuth } from "@/context/AuthContext"
 
 const itemsLinks = [
@@ -22,7 +21,7 @@ const Drawer = ({
 }) => {
     const { user, logout, loading } = useAuth()
 
-    if (loading) return null // Don’t render drawer during loading
+    if (loading) return null
 
     return (
         <AnimatePresence>
@@ -33,7 +32,6 @@ const Drawer = ({
                     exit={{ x: "100%" }}
                     transition={{ duration: 0.3, ease: "easeInOut" }}
                     className='fixed top-0 right-0 bottom-0 w-[75%] max-w-[320px] bg-[#252525] text-[#EAE0D5] z-50 overflow-y-auto'>
-                    {/* Header */}
                     <div className='flex items-center justify-between px-6 py-4 border-b border-[#3A2E2B]'>
                         <span className='text-xl font-author font-bold'>
                             Menu
@@ -44,11 +42,11 @@ const Drawer = ({
                             <XIcon className='w-6 h-6 text-[#EAE0D5]' />
                         </button>
                     </div>
-                    {/* SearchBar */}
+
                     <div className='px-6 py-4'>
                         <Searchbar />
                     </div>
-                    {/* Navigation Links */}
+
                     <div className='px-6 py-4 space-y-4'>
                         {itemsLinks.map((link) => (
                             <Link
@@ -62,7 +60,7 @@ const Drawer = ({
                         {user ? (
                             <>
                                 <Link
-                                    href='/profile'
+                                    href='/dashboard?tab=settings'
                                     onClick={onClose}
                                     className='block text-lg font-author font-medium hover:text-[#D68C45] active:text-[#B36E30] transition-colors duration-200'>
                                     Profile

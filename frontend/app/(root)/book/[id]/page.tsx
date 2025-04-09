@@ -171,7 +171,7 @@ export default function BookPage() {
 
             <main className='bg-charcoalBlack min-h-screen'>
                 <HeroSectionProduct
-                    _id={book._id} // Add this line
+                    _id={book._id}
                     title={book.title}
                     author={book.author}
                     reviews_number={book.reviews?.length || 0}

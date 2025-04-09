@@ -1,37 +1,21 @@
-require('dotenv').config();
 const express = require('express');
 const mongoose = require('mongoose');
 const cors = require('cors');
-const authRoutes = require('./routes/auth');
-const bookRoutes = require('./routes/books');
-const cartRoutes = require('./routes/cart'); // Add this
+require('dotenv').config();
 
 const app = express();
 
-app.use(cors({ origin: 'http://localhost:3000', credentials: true }));
+app.use(cors());
 app.use(express.json());
-app.use((req, res, next) => {
-  console.log(`Received ${req.method} request to ${req.url}`);
-  next();
-});
 
-app.use('/api/auth', authRoutes);
-app.use('/api/books', bookRoutes);
-app.use('/api/cart', cartRoutes); // Add this
+mongoose.connect(process.env.MONGO_URI)
+  .then(() => console.log('MongoDB connected'))
+  .catch(err => console.error('MongoDB connection error:', err));
 
-app.use((req, res) => {
-  res.status(404).json({ message: `Cannot ${req.method} ${req.url}` });
-});
-
-app.get('/', (req, res) => res.send('Backend is running'));
+app.use('/api/auth', require('./routes/auth'));
+app.use('/api/books', require('./routes/books'));
+app.use('/api/cart', require('./routes/cart'));
+app.use('/api/orders', require('./routes/orders')); 
 
 const PORT = process.env.PORT || 5000;
-const MONGO_URI = process.env.MONGO_URI;
-
-mongoose
-  .connect(MONGO_URI)
-  .then(() => {
-    console.log('Connected to MongoDB');
-    app.listen(PORT, () => console.log(`Server running on port ${PORT}`));
-  })
-  .catch(err => console.error('Error connecting to MongoDB:', err));
+app.listen(PORT, () => console.log(`Server running on port ${PORT}`));

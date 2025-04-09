@@ -1,3 +1,4 @@
+// components/Navbar.tsx
 "use client"
 
 import Image from "next/image"
@@ -30,20 +31,20 @@ const Navbar = () => {
 
     if (loading) {
         return (
-            <nav className='bg-[#1B1B1B] w-full fixed top-0 left-0 right-0 z-40 border-b-[1px] border-b-[#3A2E2B] shadow-[0px_2px_10px_rgba(0,0,0,0.2)]'>
+            <nav className='bg-charcoalBlack w-full fixed top-0 left-0 right-0 z-40 border-b border-darkMocha shadow-md'>
                 <div className='container mx-auto py-4 px-6 lg:px-8'></div>
             </nav>
-        ) // Minimal placeholder during loading
+        )
     }
 
     return (
         <>
             <nav
-                className='bg-[#1B1B1B] text-[#EAE0D5] w-full fixed top-0 left-0 right-0 z-40 border-b-[1px] border-b-[#3A2E2B] shadow-[0px_2px_10px_rgba(0,0,0,0.2)]'
+                className='bg-charcoalBlack text-warmBeige w-full fixed top-0 left-0 right-0 z-40 border-b border-darkMocha shadow-md'
                 aria-label='Main Navigation'>
-                <div className='container flex items-center lg:gap-5 mx-auto justify-between py-4 px-6 lg:px-8'>
+                <div className='container flex items-center justify-between py-4 px-6 lg:px-8 gap-4 lg:gap-6'>
                     {/* Left Section: Logo & Navigation */}
-                    <div className='flex items-center gap-3 md:gap-8'>
+                    <div className='flex items-center gap-4 md:gap-8'>
                         <Link
                             href='/'
                             className='flex items-center'>
@@ -52,15 +53,15 @@ const Navbar = () => {
                                 alt='Inkwell Logo'
                                 width={90}
                                 height={90}
-                                className='hover:scale-[1.05] transition duration-200 ease-in-out'
+                                className='hover:scale-105 transition-transform duration-200'
                             />
                         </Link>
-                        <div className='hidden md:flex items-center justify-end gap-6 text-[16px] font-[Author Sans] font-medium'>
+                        <div className='hidden md:flex items-center gap-6 text-base font-generalSans font-medium'>
                             {itemsLinks.map((link) => (
                                 <Link
                                     key={link.label}
                                     href={link.href}
-                                    className='hover:text-[#D68C45] active:text-[#B36E30] transition-colors duration-200'>
+                                    className='hover:text-burntAmber active:text-deepCopper transition-colors duration-200'>
                                     {link.label}
                                 </Link>
                             ))}
@@ -73,16 +74,15 @@ const Navbar = () => {
                     </div>
 
                     {/* Right Section: Actions */}
-                    <div className='flex items-center gap-3 lg:gap-4'>
-                        {/* Cart Icon */}
+                    <div className='flex items-center gap-4 lg:gap-6'>
                         <Link
                             href='/cart'
                             className='relative'>
                             <Button
                                 variant='link'
-                                className='p-0 [&_svg]:w-6 [&_svg]:h-6 text-mutedSand hover:text-burntAmber'
+                                className='p-0 text-mutedSand hover:text-burntAmber'
                                 aria-label={`Cart with ${cart.length} items`}>
-                                <ShoppingCart />
+                                <ShoppingCart className='w-6 h-6' />
                                 {cart.length > 0 && (
                                     <span className='absolute -top-1 -right-1 bg-burntAmber text-darkMutedTeal text-xs rounded-full w-4 h-4 flex items-center justify-center'>
                                         {cart.length}
@@ -91,18 +91,17 @@ const Navbar = () => {
                             </Button>
                         </Link>
 
-                        {/* User Icon or Connect Button */}
                         <div className='relative hidden md:block'>
                             {user ? (
                                 <>
                                     <Button
                                         variant='link'
-                                        className='p-0 [&_svg]:w-6 [&_svg]:h-6 text-mutedSand hover:text-burntAmber'
+                                        className='p-0 text-mutedSand hover:text-burntAmber'
                                         onClick={() =>
                                             setIsDropdownOpen(!isDropdownOpen)
                                         }
                                         aria-label='User menu'>
-                                        <User />
+                                        <User className='w-6 h-6' />
                                     </Button>
                                     <AnimatePresence>
                                         {isDropdownOpen && (
@@ -113,8 +112,8 @@ const Navbar = () => {
                                                 variants={dropdownVariants}
                                                 className='absolute right-0 mt-2 w-48 bg-deepGray rounded-lg shadow-lg py-2 text-warmBeige z-50'>
                                                 <Link
-                                                    href='/profile'
-                                                    className='block px-4 py-2 hover:bg-burntAmber hover:text-darkMutedTeal w-5/6 rounded-lg text-center mx-auto'
+                                                    href='/dashboard?tab=settings'
+                                                    className='block px-4 py-2 hover:bg-burntAmber hover:text-darkMutedTeal rounded-lg text-center'
                                                     onClick={() =>
                                                         setIsDropdownOpen(false)
                                                     }>
@@ -122,7 +121,7 @@ const Navbar = () => {
                                                 </Link>
                                                 <Link
                                                     href='/dashboard'
-                                                    className='block px-4 py-2 hover:bg-burntAmber hover:text-darkMutedTeal w-5/6 rounded-lg text-center mx-auto'
+                                                    className='block px-4 py-2 hover:bg-burntAmber hover:text-darkMutedTeal rounded-lg text-center'
                                                     onClick={() =>
                                                         setIsDropdownOpen(false)
                                                     }>
@@ -133,7 +132,7 @@ const Navbar = () => {
                                                         logout()
                                                         setIsDropdownOpen(false)
                                                     }}
-                                                    className='py-2 hover:bg-burntAmber hover:text-darkMutedTeal w-5/6 rounded-lg text-center mx-auto justify-center flex'>
+                                                    className='w-full px-4 py-2 hover:bg-burntAmber hover:text-darkMutedTeal rounded-lg text-center flex justify-center'>
                                                     Disconnect
                                                 </button>
                                             </motion.div>
@@ -143,7 +142,7 @@ const Navbar = () => {
                             ) : (
                                 <Link href='/login'>
                                     <Button
-                                        className='rounded-full bg-[#D68C45] text-darkMutedTeal font-generalSans font-bold px-4 py-2 text-sm hover:bg-[#B36E30] transition duration-200'
+                                        className='rounded-full bg-burntAmber text-darkMutedTeal font-generalSans font-bold px-4 py-2 text-sm hover:bg-deepCopper transition-colors'
                                         aria-label='Connect to Your Account'>
                                         Connect
                                     </Button>
@@ -151,13 +150,12 @@ const Navbar = () => {
                             )}
                         </div>
 
-                        {/* Mobile Menu Icon */}
                         <Button
                             variant='link'
-                            className='p-0 [&_svg]:w-6 [&_svg]:h-6 md:hidden text-mutedSand hover:text-burntAmber active:text-deepCopper'
+                            className='p-0 text-mutedSand hover:text-burntAmber active:text-deepCopper md:hidden'
                             onClick={() => setIsDrawerOpen(true)}
                             aria-label='Open Menu'>
-                            <MenuIcon />
+                            <MenuIcon className='w-6 h-6' />
                         </Button>
                     </div>
                 </div>

@@ -29,19 +29,17 @@ export const registerUser = async (
 }
 
 export const loginUser = async (email: string, password: string) => {
-    const response = await fetch("http://localhost:5000/api/auth/login", {
+    const response = await fetch(`${BASE_URL}/api/auth/login`, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ email, password }),
     })
-    if (!response.ok) {
-        throw new Error("Login failed")
-    }
+    if (!response.ok) throw new Error("Login failed")
     return response.json()
 }
 
 export const addToWishlist = async (token: string, bookId: string) => {
-    const response = await fetch("http://localhost:5000/api/auth/wishlist", {
+    const response = await fetch(`${BASE_URL}/api/auth/wishlist`, {
         method: "POST",
         headers: {
             "Content-Type": "application/json",
@@ -49,33 +47,24 @@ export const addToWishlist = async (token: string, bookId: string) => {
         },
         body: JSON.stringify({ bookId }),
     })
-    if (!response.ok) {
-        throw new Error("Failed to add to wishlist")
-    }
+    if (!response.ok) throw new Error("Failed to add to wishlist")
     return response.json()
 }
 
 export const getWishlist = async (token: string) => {
-    const response = await fetch("http://localhost:5000/api/auth/wishlist", {
+    const response = await fetch(`${BASE_URL}/api/auth/wishlist`, {
         headers: { Authorization: `Bearer ${token}` },
     })
-    if (!response.ok) {
-        throw new Error("Failed to fetch wishlist")
-    }
+    if (!response.ok) throw new Error("Failed to fetch wishlist")
     return response.json()
 }
 
 export const removeFromWishlist = async (token: string, bookId: string) => {
-    const response = await fetch(
-        `http://localhost:5000/api/auth/wishlist/${bookId}`,
-        {
-            method: "DELETE",
-            headers: { Authorization: `Bearer ${token}` },
-        }
-    )
-    if (!response.ok) {
-        throw new Error("Failed to remove from wishlist")
-    }
+    const response = await fetch(`${BASE_URL}/api/auth/wishlist/${bookId}`, {
+        method: "DELETE",
+        headers: { Authorization: `Bearer ${token}` },
+    })
+    if (!response.ok) throw new Error("Failed to remove from wishlist")
     return response.json()
 }
 
@@ -84,9 +73,8 @@ export const fetchBooks = async (page = 1, limit = 10): Promise<any> => {
         const response = await axios.get(`${BASE_URL}/api/books`, {
             params: { page, limit },
         })
-        if (!Array.isArray(response.data.data)) {
+        if (!Array.isArray(response.data.data))
             throw new Error("API did not return an array")
-        }
         return response.data
     } catch (error) {
         console.error("Error fetching books:", error)
@@ -111,4 +99,49 @@ export const fetchBookById = async (id: string): Promise<any> => {
         }
         throw error
     }
+}
+
+export const updateProfile = async (
+    token: string,
+    data: { firstName?: string; lastName?: string; email?: string }
+) => {
+    const response = await fetch(`${BASE_URL}/api/auth/profile`, {
+        method: "PUT",
+        headers: {
+            "Content-Type": "application/json",
+            Authorization: `Bearer ${token}`,
+        },
+        body: JSON.stringify(data),
+    })
+    if (!response.ok) throw new Error("Failed to update profile")
+    return response.json()
+}
+
+export const getProfile = async (token: string) => {
+    const response = await fetch(`${BASE_URL}/api/auth/profile`, {
+        headers: { Authorization: `Bearer ${token}` },
+    })
+    if (!response.ok) throw new Error("Failed to fetch profile")
+    return response.json()
+}
+
+export const getOrders = async (token: string) => {
+    const response = await fetch(`${BASE_URL}/api/auth/orders`, {
+        headers: { Authorization: `Bearer ${token}` },
+    })
+    if (!response.ok) throw new Error("Failed to fetch orders")
+    return response.json()
+}
+
+export const placeOrder = async (token: string, items: any[]) => {
+    const response = await fetch(`${BASE_URL}/api/orders`, {
+        method: "POST",
+        headers: {
+            "Content-Type": "application/json",
+            Authorization: `Bearer ${token}`,
+        },
+        body: JSON.stringify({ items }),
+    })
+    if (!response.ok) throw new Error("Failed to place order")
+    return response.json()
 }

@@ -1,15 +1,25 @@
 const mongoose = require('mongoose');
 
-const userSchema = new mongoose.Schema({
-  firstName: String,
-  lastName: String,
-  email: String,
-  password: String,
+const UserSchema = new mongoose.Schema({
+  firstName: { type: String, required: true },
+  lastName: { type: String, required: true },
+  email: { type: String, required: true, unique: true },
+  password: { type: String, required: true },
+  createdAt: { type: Date, default: Date.now },
   wishlist: [{ type: mongoose.Schema.Types.ObjectId, ref: 'Book' }],
   cart: [{
     _id: { type: mongoose.Schema.Types.ObjectId, ref: 'Book' },
-    quantity: { type: Number, default: 1 }
+    quantity: { type: Number, default: 1 },
   }],
-}, { timestamps: true });
-
-module.exports = mongoose.model('User', userSchema);
+  orders: [{
+    orderId: { type: String, required: true },
+    items: [{
+      bookId: { type: mongoose.Schema.Types.ObjectId, ref: 'Book' },
+      quantity: { type: Number, required: true },
+      price: { type: Number, required: true },
+    }],
+    total: { type: Number, required: true },
+    createdAt: { type: Date, default: Date.now },
+  }],
+}, { versionKey: false }); 
+module.exports = mongoose.model('User', UserSchema);

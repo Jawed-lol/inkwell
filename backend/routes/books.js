@@ -1,6 +1,7 @@
 const express = require('express');
 const router = express.Router();
 const Joi = require('joi');
+const mongoose = require('mongoose');
 const { Book, Author } = require('../models/Books');
 
 // Joi Validation Schemas (unchanged)
@@ -33,6 +34,44 @@ const reviewSchema = Joi.object({
   comment: Joi.string().optional(),
 });
 
+// GET 4 random books (moved to top to avoid conflict with /:id)
+router.get('/random', async (req, res) => {
+  try {
+    const randomBooks = await Book.aggregate([
+      { $sample: { size: 4 } },
+      {
+        $lookup: {
+          from: 'authors',
+          localField: 'author',
+          foreignField: '_id',
+          as: 'author',
+        },
+      },
+      { $unwind: '$author' },
+      {
+        $project: {
+          _id: { $toString: '$_id' },
+          title: 1,
+          author: '$author.name',
+          rating: {
+            $cond: {
+              if: { $gt: [{ $size: '$reviews' }, 0] },
+              then: { $round: [{ $avg: '$reviews.rating' }, 1] },
+              else: 0,
+            },
+          },
+          urlPath: 1,
+          price: 1,
+        },
+      },
+    ]);
+    res.json(randomBooks);
+  } catch (error) {
+    console.error('Error fetching random books:', error);
+    res.status(500).json({ message: 'Server error' });
+  }
+});
+
 // GET all books with pagination
 router.get('/', async (req, res) => {
   try {
@@ -43,13 +82,13 @@ router.get('/', async (req, res) => {
     const books = await Book.find()
       .skip(skip)
       .limit(limit)
-      .populate('author', 'name about') // Include author name and bio
+      .populate('author', 'name about')
       .lean();
 
     const formattedBooks = books.map(book => ({
       ...book,
       author: book.author.name,
-      author_bio: book.author.about, // Add author bio
+      author_bio: book.author.about,
     }));
 
     const totalBooks = await Book.countDocuments();
@@ -65,8 +104,11 @@ router.get('/', async (req, res) => {
   }
 });
 
-// GET a single book by ID
+// GET a single book by ID (with ObjectId validation)
 router.get('/:id', async (req, res) => {
+  if (!mongoose.Types.ObjectId.isValid(req.params.id)) {
+    return res.status(400).json({ success: false, message: 'Invalid book ID' });
+  }
   try {
     const book = await Book.findById(req.params.id)
       .populate('author', 'name about')
@@ -86,7 +128,7 @@ router.get('/:id', async (req, res) => {
   }
 });
 
-// POST a new book (unchanged)
+// POST a new book
 router.post('/', async (req, res) => {
   try {
     const { error } = bookSchema.validate(req.body);
@@ -124,7 +166,7 @@ router.post('/', async (req, res) => {
   }
 });
 
-// POST a review for a book (unchanged)
+// POST a review for a book
 router.post('/:id/reviews', async (req, res) => {
   try {
     const { error } = reviewSchema.validate(req.body);

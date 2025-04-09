@@ -101,7 +101,7 @@ export default function Wishlist() {
                                 <button
                                     onClick={() =>
                                         console.log("Add to cart:", book._id)
-                                    } // Replace with onAddToCart logic
+                                    }
                                     className='p-2 bg-burntAmber text-darkMutedTeal rounded-lg hover:bg-deepCopper'>
                                     <ShoppingCart size={20} />
                                 </button>

@@ -3,9 +3,34 @@
 import { useAuth } from "@/context/AuthContext"
 import { ShoppingBag, Heart, Edit } from "lucide-react"
 import Link from "next/link"
+import { useState, useEffect } from "react"
+import { getProfile } from "@/lib/api"
 
 export default function Profile() {
-    const { user, loading } = useAuth()
+    const { user, token, loading } = useAuth()
+    const [profileData, setProfileData] = useState<{
+        name: string
+        email: string
+        createdAt: string
+        wishlistItems: number
+        orderedItems: number
+    } | null>(null)
+    const [fetchError, setFetchError] = useState<string | null>(null)
+
+    useEffect(() => {
+        if (token) {
+            const fetchProfile = async () => {
+                try {
+                    const data = await getProfile(token)
+                    setProfileData(data)
+                    setFetchError(null)
+                } catch (error) {
+                    setFetchError("Failed to load profile data")
+                }
+            }
+            fetchProfile()
+        }
+    }, [token])
 
     if (loading) {
         return (
@@ -13,7 +38,7 @@ export default function Profile() {
         )
     }
 
-    if (!user) {
+    if (!user || !token) {
         return (
             <div className='text-mutedSand text-center'>
                 Unable to load profile. Please log in again.
@@ -21,41 +46,44 @@ export default function Profile() {
         )
     }
 
-    const joinedDate = user.createdAt
-        ? new Date(user.createdAt).toLocaleDateString("en-US", {
+    if (fetchError) {
+        return <div className='text-mutedSand text-center'>{fetchError}</div>
+    }
+
+    if (!profileData) {
+        return (
+            <div className='text-mutedSand text-center'>
+                Loading profile data...
+            </div>
+        )
+    }
+
+    const joinedDate = profileData.createdAt
+        ? new Date(profileData.createdAt).toLocaleDateString("en-US", {
               year: "numeric",
               month: "long",
               day: "numeric",
           })
         : "Unknown"
 
-    // Mock data (replace with backend endpoints later)
-    const totalOrders = 5 // Fetch from /api/orders
-    const wishlistCount = 3 // Fetch from /api/wishlist
-
     return (
-        <div className='max-w-2xl mx-auto bg-deepGray p-6 rounded-lg shadow-lg'>
-            <h2 className='text-xl sm:text-2xl font-bold mb-6 text-center md:text-left text-warmBeige'>
+        <div className='w-full max-w-2xl mx-auto bg-deepGray p-4 sm:p-6 rounded-lg shadow-lg'>
+            <h2 className='text-lg sm:text-xl md:text-2xl font-bold mb-4 sm:mb-6 text-center text-warmBeige'>
                 Your Profile
             </h2>
-
-            {/* Profile Card */}
-            <div className='flex flex-col sm:flex-row items-center sm:items-start gap-6 mb-6'>
-                {/* Avatar Placeholder */}
+            <div className='flex flex-col sm:flex-row items-center sm:items-start gap-4 sm:gap-6 mb-4 sm:mb-6'>
                 <div className='flex-shrink-0'>
                     <div className='w-16 h-16 sm:w-20 sm:h-20 bg-burntAmber rounded-full flex items-center justify-center text-darkMutedTeal text-2xl sm:text-3xl font-bold'>
-                        {user.name.charAt(0).toUpperCase()}
+                        {profileData.name.charAt(0).toUpperCase()}
                     </div>
                 </div>
-
-                {/* User Info */}
                 <div className='flex-1 text-center sm:text-left'>
-                    <h3 className='text-lg sm:text-xl font-semibold text-warmBeige mb-2'>
-                        {user.name}
+                    <h3 className='text-base sm:text-lg md:text-xl font-semibold text-warmBeige mb-2'>
+                        {profileData.name}
                     </h3>
                     <p className='text-sm sm:text-base text-mutedSand mb-1'>
                         <span className='font-bold text-warmBeige'>Email:</span>{" "}
-                        {user.email}
+                        {profileData.email}
                     </p>
                     <p className='text-sm sm:text-base text-mutedSand'>
                         <span className='font-bold text-warmBeige'>
@@ -64,44 +92,44 @@ export default function Profile() {
                         {joinedDate}
                     </p>
                 </div>
-
-                {/* Edit Button */}
-                <Link href='/dashboard/settings'>
-                    <button className='bg-burntAmber text-darkMutedTeal px-4 py-2 rounded-lg font-generalSans font-semibold flex items-center gap-2 hover:bg-deepCopper transition-colors'>
-                        <Edit size={18} />
+                <Link href='/dashboard'>
+                    <button className='bg-burntAmber text-darkMutedTeal px-3 py-1 sm:px-4 sm:py-2 rounded-lg font-generalSans font-semibold flex items-center gap-2 hover:bg-deepCopper transition-colors text-sm sm:text-base'>
+                        <Edit
+                            size={16}
+                            className='sm:w-18 sm:h-18'
+                        />
                         Edit Profile
                     </button>
                 </Link>
             </div>
-
-            {/* Quick Stats */}
-            <div className='grid grid-cols-1 sm:grid-cols-2 gap-4'>
-                {/* Orders Summary */}
-                <div className='bg-slightlyLightGrey p-4 rounded-lg flex items-center gap-3'>
+            <div className='grid grid-cols-1 sm:grid-cols-2 gap-3 sm:gap-4'>
+                <div className='bg-slightlyLightGrey p-3 sm:p-4 rounded-lg flex items-center gap-2 sm:gap-3'>
                     <ShoppingBag
-                        size={24}
-                        className='text-burntAmber'
+                        size={20}
+                        className='text-burntAmber sm:w-24 sm:h-24'
                     />
                     <div>
-                        <p className='text-warmBeige font-semibold'>
-                            Total Orders
+                        <p className='text-warmBeige font-semibold text-sm sm:text-base'>
+                            Items Ordered
                         </p>
-                        <p className='text-mutedSand'>{totalOrders}</p>
+                        <p className='text-mutedSand text-sm sm:text-base'>
+                            {profileData.orderedItems}
+                        </p>
                     </div>
                 </div>
-
-                {/* Wishlist Summary */}
-                <div className='bg-slightlyLightGrey p-4 rounded-lg flex items-center gap-3'>
+                <div className='bg-slightlyLightGrey p-3 sm:p-4 rounded-lg flex items-center gap-2 sm:gap-3'>
                     <Heart
-                        size={24}
-                        className='text-burntAmber'
+                        size={20}
+                        className='text-burntAmber sm:w-24 sm:h-24'
                     />
                     <div>
-                        <p className='text-warmBeige font-semibold'>Wishlist</p>
-                        <p className='text-mutedSand'>
-                            {wishlistCount}{" "}
+                        <p className='text-warmBeige font-semibold text-sm sm:text-base'>
+                            Items Wishlisted
+                        </p>
+                        <p className='text-mutedSand text-sm sm:text-base'>
+                            {profileData.wishlistItems}{" "}
                             <Link
-                                href='/wishlist'
+                                href='/dashboard/wishlist'
                                 className='text-burntAmber hover:underline'>
                                 View
                             </Link>

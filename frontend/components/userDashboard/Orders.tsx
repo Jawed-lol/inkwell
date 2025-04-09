@@ -19,6 +19,7 @@ export default function Orders() {
                     setOrders(data)
                     setFetchError(null)
                 } catch (error) {
+                    console.error("Error fetching orders:", error)
                     setFetchError("Failed to load orders. Please try again.")
                 }
             }

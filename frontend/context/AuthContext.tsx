@@ -43,7 +43,7 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
         try {
             console.log("Fetching profile with token:", authToken)
             const response = await fetch(
-                "http://localhost:5000/api/auth/profile",
+                "https://inkwell-oblr.onrender.com/api/auth/profile",
                 {
                     headers: { Authorization: `Bearer ${authToken}` },
                 }

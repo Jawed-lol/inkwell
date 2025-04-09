@@ -51,9 +51,12 @@ export const CartProvider = ({ children }: { children: ReactNode }) => {
                 return
             }
             try {
-                const response = await fetch("http://localhost:5000/api/cart", {
-                    headers: { Authorization: `Bearer ${token}` },
-                })
+                const response = await fetch(
+                    "https://inkwell-oblr.onrender.com/api/cart",
+                    {
+                        headers: { Authorization: `Bearer ${token}` },
+                    }
+                )
                 if (!response.ok) {
                     const errorData = await response.json()
                     throw new Error(errorData.message || "Failed to load cart")
@@ -84,14 +87,17 @@ export const CartProvider = ({ children }: { children: ReactNode }) => {
                 "Syncing cart with payload:",
                 JSON.stringify(payload, null, 2)
             )
-            const response = await fetch("http://localhost:5000/api/cart", {
-                method: "PUT",
-                headers: {
-                    "Content-Type": "application/json",
-                    Authorization: `Bearer ${token}`,
-                },
-                body: JSON.stringify({ items: payload }),
-            })
+            const response = await fetch(
+                "https://inkwell-oblr.onrender.com/api/cart",
+                {
+                    method: "PUT",
+                    headers: {
+                        "Content-Type": "application/json",
+                        Authorization: `Bearer ${token}`,
+                    },
+                    body: JSON.stringify({ items: payload }),
+                }
+            )
             const responseText = await response.text()
             console.log("Raw PUT response:", responseText)
             if (!response.ok) {

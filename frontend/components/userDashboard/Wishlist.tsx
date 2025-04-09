@@ -1,7 +1,7 @@
 "use client"
 
 import { useAuth } from "@/context/AuthContext"
-import { useState, useEffect } from "react"
+import { useState, useEffect, useCallback } from "react"
 import { getWishlist, removeFromWishlist } from "@/lib/api"
 import { Trash2, ShoppingCart } from "lucide-react"
 import Image from "next/image"
@@ -20,27 +20,29 @@ export default function Wishlist() {
     const [wishlist, setWishlist] = useState<Book[]>([])
     const [fetchError, setFetchError] = useState<string | null>(null)
 
+    const fetchWishlist = useCallback(async () => {
+        if (!token) return
+
+        try {
+            const data = await getWishlist(token)
+            setWishlist(data)
+            setFetchError(null)
+        } catch {
+            setFetchError("Failed to load wishlist. Please try again.")
+        }
+    }, [token])
+
     useEffect(() => {
         if (token) {
             fetchWishlist()
         }
-    }, [token])
-
-    const fetchWishlist = async () => {
-        try {
-            const data = await getWishlist(token!)
-            setWishlist(data)
-            setFetchError(null)
-        } catch (error) {
-            setFetchError("Failed to load wishlist. Please try again.")
-        }
-    }
+    }, [token, fetchWishlist])
 
     const handleRemove = async (bookId: string) => {
         try {
             await removeFromWishlist(token!, bookId)
             setWishlist(wishlist.filter((book) => book._id !== bookId))
-        } catch (error) {
+        } catch {
             setFetchError("Failed to remove item. Please try again.")
         }
     }

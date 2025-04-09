@@ -6,6 +6,10 @@ import { useState } from "react"
 import { useRouter } from "next/navigation"
 import { motion } from "framer-motion"
 
+type CheckoutError = {
+    message: string
+}
+
 export default function CheckoutPage() {
     const { cart, clearCart } = useCart()
     const { token } = useAuth()
@@ -27,29 +31,33 @@ export default function CheckoutPage() {
         setLoading(true)
         setError(null)
 
-        console.log("Checkout request:", { token, cart }) // Debug log
-
         try {
-            const response = await fetch("http://localhost:5000/api/orders", {
-                method: "POST",
-                headers: {
-                    "Content-Type": "application/json",
-                    Authorization: `Bearer ${token}`,
-                },
-                body: JSON.stringify({ items: cart }),
-            })
+            const response = await fetch(
+                "https://inkwell-oblr.onrender.com/api/orders",
+                {
+                    method: "POST",
+                    headers: {
+                        "Content-Type": "application/json",
+                        Authorization: `Bearer ${token}`,
+                    },
+                    body: JSON.stringify({ items: cart }),
+                }
+            )
 
             if (!response.ok) {
-                const errorData = await response.json()
+                const errorData = (await response.json()) as CheckoutError
                 throw new Error(errorData.message || "Failed to place order")
             }
 
             clearCart()
             router.push("/dashboard?tab=orders")
-        } catch (err: any) {
-            setError(
-                err.message || "Failed to process checkout. Please try again."
-            )
+        } catch (err: unknown) {
+            const errorMessage =
+                err instanceof Error
+                    ? err.message
+                    : "Failed to process checkout. Please try again."
+
+            setError(errorMessage)
         } finally {
             setLoading(false)
         }

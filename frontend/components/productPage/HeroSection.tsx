@@ -16,7 +16,7 @@ import { addToWishlist } from "@/lib/api"
 import { useState } from "react"
 
 interface BookProps {
-    _id: string // Must be provided
+    _id: string
     urlPath: string
     title: string
     author: string
@@ -58,21 +58,15 @@ const HeroSectionProduct = ({
             setError("Please log in to add to wishlist")
             return
         }
-        if (!_id) {
-            setError("No book ID provided")
-            console.error("HeroSectionProduct: Missing _id prop", {
-                title,
-                author,
-            })
-            return
-        }
+
         try {
-            console.log("Adding to wishlist, book ID:", _id)
             await addToWishlist(token, _id)
             setIsWishlisted(true)
             setError(null)
-        } catch (err: any) {
-            setError(err.message || "Failed to add to wishlist")
+        } catch (err: unknown) {
+            const errorMessage =
+                err instanceof Error ? err.message : "Failed to add to wishlist"
+            setError(errorMessage)
         }
     }
 

@@ -5,6 +5,7 @@ import {
     useContext,
     useState,
     useEffect,
+    useCallback,
     ReactNode,
 } from "react"
 import { useRouter } from "next/navigation"
@@ -27,58 +28,58 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
     const [loading, setLoading] = useState(true)
     const router = useRouter()
 
-    useEffect(() => {
-        const storedToken = localStorage.getItem("authToken")
-        if (storedToken) {
-            console.log("Found stored token:", storedToken)
-            setToken(storedToken)
-            fetchProfile(storedToken)
-        } else {
-            console.log("No stored token found")
-            setLoading(false)
-        }
-    }, [])
-
-    const fetchProfile = async (authToken: string) => {
-        try {
-            console.log("Fetching profile with token:", authToken)
-            const response = await fetch(
-                "https://inkwell-oblr.onrender.com/api/auth/profile",
-                {
-                    headers: { Authorization: `Bearer ${authToken}` },
-                }
-            )
-            if (response.ok) {
-                const data = await response.json()
-                console.log("Profile fetched:", data)
-                setUser(data)
-            } else {
-                console.error("Profile fetch failed:", response.status)
-                logout()
-            }
-        } catch (error) {
-            console.error("Error fetching profile:", error)
-            logout()
-        } finally {
-            setLoading(false)
-        }
-    }
-
-    const login = (newToken: string) => {
-        console.log("Logging in with token:", newToken)
-        localStorage.setItem("authToken", newToken)
-        setToken(newToken)
-        fetchProfile(newToken)
-        router.push("/dashboard")
-    }
-
-    const logout = () => {
-        console.log("Logging out")
+    const logout = useCallback(() => {
         localStorage.removeItem("authToken")
         setToken(null)
         setUser(null)
         router.push("/login")
-    }
+    }, [router])
+
+    const fetchProfile = useCallback(
+        async (authToken: string) => {
+            try {
+                const response = await fetch(
+                    "https://inkwell-oblr.onrender.com/api/auth/profile",
+                    {
+                        headers: { Authorization: `Bearer ${authToken}` },
+                    }
+                )
+
+                if (response.ok) {
+                    const data = await response.json()
+                    setUser(data)
+                } else {
+                    logout()
+                }
+            } catch {
+                logout()
+            } finally {
+                setLoading(false)
+            }
+        },
+        [logout]
+    )
+
+    useEffect(() => {
+        const storedToken = localStorage.getItem("authToken")
+
+        if (storedToken) {
+            setToken(storedToken)
+            fetchProfile(storedToken)
+        } else {
+            setLoading(false)
+        }
+    }, [fetchProfile])
+
+    const login = useCallback(
+        (newToken: string) => {
+            localStorage.setItem("authToken", newToken)
+            setToken(newToken)
+            fetchProfile(newToken)
+            router.push("/dashboard")
+        },
+        [fetchProfile, router]
+    )
 
     return (
         <AuthContext.Provider value={{ user, token, loading, login, logout }}>

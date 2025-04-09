@@ -4,9 +4,34 @@ import { useAuth } from "@/context/AuthContext"
 import { useState, useEffect } from "react"
 import { getProfile, updateProfile } from "@/lib/api"
 
+interface ProfileFormData {
+    firstName: string
+    lastName: string
+    email: string
+}
+
+interface ProfileResponse {
+    name?: string
+    firstName?: string
+    first_name?: string
+    lastName?: string
+    last_name?: string
+    email?: string
+    userEmail?: string
+    user_email?: string
+    [key: string]: unknown
+}
+
+interface ProfileUpdatePayload {
+    firstName: string
+    lastName: string
+    email: string
+    name: string
+}
+
 export default function Settings() {
-    const { token, user } = useAuth()
-    const [formData, setFormData] = useState({
+    const { token } = useAuth()
+    const [formData, setFormData] = useState<ProfileFormData>({
         firstName: "",
         lastName: "",
         email: "",
@@ -18,13 +43,29 @@ export default function Settings() {
         if (token) {
             const fetchProfile = async () => {
                 try {
-                    const data = await getProfile(token)
+                    const responseData = (await getProfile(
+                        token
+                    )) as unknown as ProfileResponse
+
                     setFormData({
-                        firstName: data.name.split(" ")[0] || "",
-                        lastName: data.name.split(" ")[1] || "",
-                        email: data.email,
+                        firstName:
+                            responseData.firstName ||
+                            responseData.first_name ||
+                            responseData.name?.split(" ")[0] ||
+                            "",
+                        lastName:
+                            responseData.lastName ||
+                            responseData.last_name ||
+                            responseData.name?.split(" ")[1] ||
+                            "",
+                        email:
+                            responseData.email ||
+                            responseData.userEmail ||
+                            responseData.user_email ||
+                            "",
                     })
-                } catch (err) {
+                } catch (error) {
+                    console.error("Error fetching profile:", error)
                     setError("Failed to load profile data")
                 }
             }
@@ -36,19 +77,41 @@ export default function Settings() {
         e.preventDefault()
         setError(null)
         setSuccess(null)
+
         try {
-            const updatedData = await updateProfile(token!, {
+            const updatePayload: ProfileUpdatePayload = {
                 firstName: formData.firstName,
                 lastName: formData.lastName,
                 email: formData.email,
-            })
+                name: `${formData.firstName} ${formData.lastName}`.trim(),
+            }
+
+            const updatedData = (await updateProfile(
+                token!,
+                updatePayload as unknown as Record<string, unknown>
+            )) as unknown as ProfileResponse
+
             setFormData({
-                firstName: updatedData.name.split(" ")[0] || "",
-                lastName: updatedData.name.split(" ")[1] || "",
-                email: updatedData.email,
+                firstName:
+                    updatedData.firstName ||
+                    updatedData.first_name ||
+                    updatedData.name?.split(" ")[0] ||
+                    formData.firstName,
+                lastName:
+                    updatedData.lastName ||
+                    updatedData.last_name ||
+                    updatedData.name?.split(" ")[1] ||
+                    formData.lastName,
+                email:
+                    updatedData.email ||
+                    updatedData.userEmail ||
+                    updatedData.user_email ||
+                    formData.email,
             })
+
             setSuccess("Profile updated successfully!")
-        } catch (err) {
+        } catch (error) {
+            console.error("Error updating profile:", error)
             setError("Failed to update profile")
         }
     }

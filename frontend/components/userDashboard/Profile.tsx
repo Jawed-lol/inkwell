@@ -21,11 +21,20 @@ export default function Profile() {
         if (token) {
             const fetchProfile = async () => {
                 try {
-                    const data = await getProfile(token)
-                    setProfileData(data)
+                    const apiResponse = await getProfile(token)
+
+                    const formattedData = {
+                        name: apiResponse.name || "",
+                        email: apiResponse.email || "",
+                        createdAt: apiResponse.createdAt || "",
+                        wishlistItems: apiResponse.wishlistItems || 0,
+                        orderedItems: apiResponse.orderedItems || 0,
+                    }
+                    setProfileData(formattedData)
                     setFetchError(null)
-                } catch (error) {
+                } catch (err) {
                     setFetchError("Failed to load profile data")
+                    console.error("Profile fetch error:", err)
                 }
             }
             fetchProfile()
@@ -96,7 +105,7 @@ export default function Profile() {
                     <button className='bg-burntAmber text-darkMutedTeal px-3 py-1 sm:px-4 sm:py-2 rounded-lg font-generalSans font-semibold flex items-center gap-2 hover:bg-deepCopper transition-colors text-sm sm:text-base'>
                         <Edit
                             size={16}
-                            className='sm:w-18 sm:h-18'
+                            className='sm:w-5 sm:h-5'
                         />
                         Edit Profile
                     </button>
@@ -106,7 +115,7 @@ export default function Profile() {
                 <div className='bg-slightlyLightGrey p-3 sm:p-4 rounded-lg flex items-center gap-2 sm:gap-3'>
                     <ShoppingBag
                         size={20}
-                        className='text-burntAmber sm:w-24 sm:h-24'
+                        className='text-burntAmber'
                     />
                     <div>
                         <p className='text-warmBeige font-semibold text-sm sm:text-base'>
@@ -120,7 +129,7 @@ export default function Profile() {
                 <div className='bg-slightlyLightGrey p-3 sm:p-4 rounded-lg flex items-center gap-2 sm:gap-3'>
                     <Heart
                         size={20}
-                        className='text-burntAmber sm:w-24 sm:h-24'
+                        className='text-burntAmber'
                     />
                     <div>
                         <p className='text-warmBeige font-semibold text-sm sm:text-base'>

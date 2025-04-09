@@ -6,16 +6,20 @@ import {
     useState,
     useEffect,
     ReactNode,
+    useCallback,
 } from "react"
 import { Book } from "@/types/book"
 import { useAuth } from "@/context/AuthContext"
 
-// Debounce utility to throttle frequent calls
-function debounce<T extends (...args: any[]) => void>(func: T, wait: number) {
+// Debounce utility function with specific typing for our use case
+function debounce<T extends (updatedCart: CartItem[]) => Promise<void>>(
+    func: T,
+    wait: number
+): (updatedCart: CartItem[]) => void {
     let timeout: NodeJS.Timeout
-    return (...args: Parameters<T>) => {
+    return (updatedCart: CartItem[]) => {
         clearTimeout(timeout)
-        timeout = setTimeout(() => func(...args), wait)
+        timeout = setTimeout(() => func(updatedCart), wait)
     }
 }
 
@@ -31,143 +35,189 @@ interface CartContextType {
     clearCart: () => void
 }
 
+interface CartApiPayloadItem {
+    _id: string
+    quantity: number
+}
+
+interface CartApiResponse {
+    items: CartItem[]
+    message?: string
+}
+
+interface CartApiError {
+    message: string
+}
+
+const API_URL = "https://inkwell-oblr.onrender.com/api/cart"
+const CART_STORAGE_KEY = "cart"
+const DEBOUNCE_DELAY = 500
+
 const CartContext = createContext<CartContextType | undefined>(undefined)
 
 export const CartProvider = ({ children }: { children: ReactNode }) => {
     const [cart, setCart] = useState<CartItem[]>(() => {
         if (typeof window === "undefined") return []
-        const savedCart = localStorage.getItem("cart")
+        const savedCart = localStorage.getItem(CART_STORAGE_KEY)
         return savedCart ? JSON.parse(savedCart) : []
     })
+
     const { token } = useAuth()
 
-    // Load cart from backend when token changes (login/logout)
-    useEffect(() => {
-        const loadCartFromBackend = async () => {
-            if (!token) {
-                setCart([])
-                localStorage.setItem("cart", JSON.stringify([]))
-                syncCartWithBackend([]) // Clear backend cart on logout
-                return
-            }
-            try {
-                const response = await fetch(
-                    "https://inkwell-oblr.onrender.com/api/cart",
-                    {
-                        headers: { Authorization: `Bearer ${token}` },
-                    }
-                )
-                if (!response.ok) {
-                    const errorData = await response.json()
-                    throw new Error(errorData.message || "Failed to load cart")
-                }
-                const data = await response.json()
-                const backendCart = data.items || []
-                console.log(
-                    "Loaded backend cart:",
-                    JSON.stringify(backendCart, null, 2)
-                )
-                setCart(backendCart)
-                localStorage.setItem("cart", JSON.stringify(backendCart))
-            } catch (error) {
-                console.error("Error loading cart from backend:", error)
-            }
-        }
-        loadCartFromBackend()
-    }, [token])
+    const syncCartWithBackend = useCallback(
+        async (updatedCart: CartItem[]) => {
+            if (!token) return
 
-    const syncCartWithBackend = async (updatedCart: CartItem[]) => {
-        if (!token) return
-        try {
-            const payload = updatedCart.map((item) => ({
-                _id: item._id,
-                quantity: item.quantity,
-            }))
-            console.log(
-                "Syncing cart with payload:",
-                JSON.stringify(payload, null, 2)
-            )
-            const response = await fetch(
-                "https://inkwell-oblr.onrender.com/api/cart",
-                {
+            try {
+                const payload: CartApiPayloadItem[] = updatedCart.map(
+                    (item) => ({
+                        _id: item._id,
+                        quantity: item.quantity,
+                    })
+                )
+
+                const response = await fetch(API_URL, {
                     method: "PUT",
                     headers: {
                         "Content-Type": "application/json",
                         Authorization: `Bearer ${token}`,
                     },
                     body: JSON.stringify({ items: payload }),
+                })
+
+                if (!response.ok) {
+                    const responseText = await response.text()
+                    let errorData: CartApiError
+
+                    try {
+                        errorData = JSON.parse(responseText) as CartApiError
+                    } catch {
+                        errorData = { message: "Invalid JSON response" }
+                    }
+
+                    throw new Error(errorData.message || "Failed to sync cart")
                 }
-            )
-            const responseText = await response.text()
-            console.log("Raw PUT response:", responseText)
-            if (!response.ok) {
-                let errorData
-                try {
-                    errorData = JSON.parse(responseText)
-                } catch {
-                    errorData = { message: "Invalid JSON response" }
-                }
-                console.error("Sync error response:", errorData)
-                throw new Error(errorData.message || "Failed to sync cart")
+
+                const data = (await response.json()) as CartApiResponse
+                setCart(data.items)
+                localStorage.setItem(
+                    CART_STORAGE_KEY,
+                    JSON.stringify(data.items)
+                )
+            } catch (error) {
+                console.error(
+                    "Error syncing cart with backend:",
+                    error instanceof Error ? error.message : String(error)
+                )
             }
-            const data = JSON.parse(responseText)
-            console.log("Sync response:", JSON.stringify(data.items, null, 2))
-            setCart(data.items)
-            localStorage.setItem("cart", JSON.stringify(data.items))
-        } catch (error) {
-            console.error("Error syncing cart with backend:", error)
-        }
-    }
+        },
+        [token]
+    )
 
-    const debouncedSyncCart = debounce(syncCartWithBackend, 500) // 500ms debounce
+    const debouncedSyncCart = debounce(syncCartWithBackend, DEBOUNCE_DELAY)
 
-    // Update localStorage when cart changes
     useEffect(() => {
-        localStorage.setItem("cart", JSON.stringify(cart))
+        const loadCartFromBackend = async () => {
+            if (!token) {
+                const emptyCart: CartItem[] = []
+                setCart(emptyCart)
+                localStorage.setItem(
+                    CART_STORAGE_KEY,
+                    JSON.stringify(emptyCart)
+                )
+                syncCartWithBackend(emptyCart)
+                return
+            }
+
+            try {
+                const response = await fetch(API_URL, {
+                    headers: { Authorization: `Bearer ${token}` },
+                })
+
+                if (!response.ok) {
+                    const errorData = (await response.json()) as CartApiError
+                    throw new Error(errorData.message || "Failed to load cart")
+                }
+
+                const data = (await response.json()) as CartApiResponse
+                const backendCart = data.items || []
+                setCart(backendCart)
+                localStorage.setItem(
+                    CART_STORAGE_KEY,
+                    JSON.stringify(backendCart)
+                )
+            } catch (error) {
+                console.error(
+                    "Error loading cart from backend:",
+                    error instanceof Error ? error.message : String(error)
+                )
+            }
+        }
+
+        loadCartFromBackend()
+    }, [token, syncCartWithBackend])
+
+    useEffect(() => {
+        localStorage.setItem(CART_STORAGE_KEY, JSON.stringify(cart))
     }, [cart])
 
-    const addToCart = (book: Book) => {
-        setCart((prevCart) => {
-            const existingItem = prevCart.find((item) => item._id === book._id)
-            const safeBook = { ...book, price: book.price ?? 0 }
-            const newCart = existingItem
-                ? prevCart.map((item) =>
-                      item._id === book._id
-                          ? { ...item, quantity: item.quantity + 1 }
-                          : item
-                  )
-                : [...prevCart, { ...safeBook, quantity: 1 }]
-            debouncedSyncCart(newCart)
-            return newCart
-        })
-    }
+    const addToCart = useCallback(
+        (book: Book) => {
+            setCart((prevCart) => {
+                const existingItem = prevCart.find(
+                    (item) => item._id === book._id
+                )
+                const safeBook = { ...book, price: book.price ?? 0 }
 
-    const updateQuantity = (bookId: string, quantity: number) => {
-        setCart((prevCart) => {
-            const newCart =
-                quantity <= 0
-                    ? prevCart.filter((item) => item._id !== bookId)
-                    : prevCart.map((item) =>
-                          item._id === bookId ? { ...item, quantity } : item
+                const newCart = existingItem
+                    ? prevCart.map((item) =>
+                          item._id === book._id
+                              ? { ...item, quantity: item.quantity + 1 }
+                              : item
                       )
-            debouncedSyncCart(newCart)
-            return newCart
-        })
-    }
+                    : [...prevCart, { ...safeBook, quantity: 1 }]
 
-    const removeFromCart = (bookId: string) => {
-        setCart((prevCart) => {
-            const newCart = prevCart.filter((item) => item._id !== bookId)
-            debouncedSyncCart(newCart)
-            return newCart
-        })
-    }
+                debouncedSyncCart(newCart)
+                return newCart
+            })
+        },
+        [debouncedSyncCart]
+    )
 
-    const clearCart = () => {
-        setCart([])
-        localStorage.setItem("cart", JSON.stringify([]))
-        syncCartWithBackend([]) // Immediate sync
-    }
+    const updateQuantity = useCallback(
+        (bookId: string, quantity: number) => {
+            setCart((prevCart) => {
+                const newCart =
+                    quantity <= 0
+                        ? prevCart.filter((item) => item._id !== bookId)
+                        : prevCart.map((item) =>
+                              item._id === bookId ? { ...item, quantity } : item
+                          )
+
+                debouncedSyncCart(newCart)
+                return newCart
+            })
+        },
+        [debouncedSyncCart]
+    )
+
+    const removeFromCart = useCallback(
+        (bookId: string) => {
+            setCart((prevCart) => {
+                const newCart = prevCart.filter((item) => item._id !== bookId)
+                debouncedSyncCart(newCart)
+                return newCart
+            })
+        },
+        [debouncedSyncCart]
+    )
+
+    const clearCart = useCallback(() => {
+        const emptyCart: CartItem[] = []
+        setCart(emptyCart)
+        localStorage.setItem(CART_STORAGE_KEY, JSON.stringify(emptyCart))
+        syncCartWithBackend(emptyCart)
+    }, [syncCartWithBackend])
 
     return (
         <CartContext.Provider

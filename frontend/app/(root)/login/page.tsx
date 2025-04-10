@@ -3,6 +3,7 @@
 import Image from "next/image"
 import Link from "next/link"
 import { useState } from "react"
+import { useRouter } from "next/navigation"
 import { loginUser } from "@/lib/api"
 import { useAuth } from "@/context/AuthContext"
 
@@ -10,6 +11,7 @@ export default function Login() {
     const [formData, setFormData] = useState({ email: "", password: "" })
     const [error, setError] = useState<string | null>(null)
     const { login } = useAuth()
+    const router = useRouter()
 
     const handleChange = (e: React.ChangeEvent<HTMLInputElement>) => {
         setFormData({ ...formData, [e.target.name]: e.target.value })
@@ -21,7 +23,14 @@ export default function Login() {
 
         try {
             const data = await loginUser(formData.email, formData.password)
+
+            if (!data.token) {
+                throw new Error("Authentication failed: No token received")
+            }
+
             login(data.token)
+
+            router.push("/dashboard")
         } catch (err) {
             setError(
                 err instanceof Error ? err.message : "An unknown error occurred"
@@ -122,7 +131,7 @@ export default function Login() {
                     className={
                         "font-generalSans text-[10px] text-mutedSand text-center md:text-[12px] lg:text-[14px]"
                     }>
-                    Don’t have an account?{" "}
+                    Don&apos;t have an account?{" "}
                     <Link
                         href='/register'
                         className='hover:text-burntAmber'>

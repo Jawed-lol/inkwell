@@ -98,36 +98,36 @@ export default function BookPage() {
                     reviews: rawBook.reviews || [],
                 }
 
+                // Fixed setter usage by directly providing the value
                 setBook(processedBook)
 
                 const allBooks = await fetchBooks()
                 const rawRelatedBooks = allBooks.data as RawBookData[]
 
-                const filteredRelatedBooks = rawRelatedBooks
+                const filteredRelatedBooks: BookApiResponse[] = rawRelatedBooks
                     .filter(
                         (b) =>
                             b._id !== bookId && b.genre === processedBook.genre
                     )
                     .slice(0, 4)
-                    .map((rawBook) => {
-                        return {
-                            _id: rawBook._id || "",
-                            title: rawBook.title || "",
-                            author: rawBook.author || "",
-                            description: rawBook.description || "",
-                            genre: rawBook.genre || "",
-                            price: rawBook.price || 0,
-                            urlPath: rawBook.urlPath || "",
-                            pages_number:
-                                rawBook.pages_number || rawBook.page_count || 0,
-                            release_year:
-                                rawBook.release_year ||
-                                rawBook.publication_year ||
-                                0,
-                            reviews: rawBook.reviews || [],
-                        } as BookApiResponse
-                    })
+                    .map((rawBook) => ({
+                        _id: rawBook._id || "",
+                        title: rawBook.title || "",
+                        author: rawBook.author || "",
+                        description: rawBook.description || "",
+                        genre: rawBook.genre || "",
+                        price: rawBook.price || 0,
+                        urlPath: rawBook.urlPath || "",
+                        pages_number:
+                            rawBook.pages_number || rawBook.page_count || 0,
+                        release_year:
+                            rawBook.release_year ||
+                            rawBook.publication_year ||
+                            0,
+                        reviews: rawBook.reviews || [],
+                    }))
 
+                // Fixed setter usage
                 setRelatedBooks(filteredRelatedBooks)
             } catch (err) {
                 console.error("Failed to load book details:", err)

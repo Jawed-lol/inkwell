@@ -1,6 +1,13 @@
 const BASE_URL = process.env.NEXT_PUBLIC_API_URL
 import axios from "axios"
 
+export interface LegacyBooksResponse {
+    success: boolean
+    message?: string
+    data: Book[]
+    totalPages: number
+}
+
 interface AuthResponse {
     success: boolean
     message?: string
@@ -35,16 +42,17 @@ interface Book {
     reviews_number?: number
 }
 
-interface BooksResponse {
+export interface BooksResponse {
     success: boolean
     message?: string
     data: Book[]
-    pagination: {
-        total: number
-        page: number
-        limit: number
-        totalPages: number
-    }
+    pagination: Pagination
+}
+export interface Pagination {
+    total: number
+    page: number
+    limit: number
+    totalPages: number
 }
 
 interface BookResponse {
@@ -182,25 +190,12 @@ export const removeFromWishlist = async (
 
 export const fetchBooks = async (
     page = 1,
-    limit = 10
-): Promise<BooksResponse> => {
-    try {
-        const response = await axios.get<BooksResponse>(
-            `${BASE_URL}/api/books`,
-            {
-                params: { page, limit },
-            }
-        )
-
-        if (!Array.isArray(response.data.data)) {
-            throw new Error("API did not return an array")
-        }
-
-        return response.data
-    } catch (error) {
-        console.error("Error fetching books:", error)
-        throw error
-    }
+    limit = 12
+): Promise<BooksResponse | LegacyBooksResponse> => {
+    const response = await axios.get(`${BASE_URL}/api/books`, {
+        params: { page, limit },
+    })
+    return response.data
 }
 
 export const fetchBookById = async (id: string): Promise<BookResponse> => {

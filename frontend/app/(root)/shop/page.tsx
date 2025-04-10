@@ -22,35 +22,33 @@ export default function ShopPage() {
     const { cart } = useCart()
 
     useEffect(() => {
-        const getBooks = async () => {
+        const loadBooks = async () => {
             try {
-                setLoading(true)
-                const response = await fetchBooks(currentPage, 12)
-                if (response && response.data) {
-                    setBooks(response.data)
+                setLoading(true) // Set loading to true before fetching
+                const response = await fetchBooks(currentPage, 12) // Fetch page 1, 10 books per page
+                setBooks(response.data)
 
-                    if (response.pagination && response.pagination.totalPages) {
-                        setTotalPages(response.pagination.totalPages)
-                    } else if (response.totalPages) {
-                        setTotalPages(response.totalPages)
-                    } else {
-                        console.warn(
-                            "Pagination information not found in response"
-                        )
-                        setTotalPages(1)
-                    }
+                // Handle pagination based on response structure
+                if (
+                    "pagination" in response &&
+                    response.pagination &&
+                    response.pagination.totalPages
+                ) {
+                    setTotalPages(response.pagination.totalPages) // Modern response
+                } else if ("totalPages" in response) {
+                    setTotalPages(response.totalPages) // Legacy response
                 } else {
-                    console.error("Invalid response format:", response)
-                    setBooks([])
+                    console.warn("Pagination information not found in response")
+                    setTotalPages(1) // Fallback
                 }
             } catch (error) {
-                console.error("Failed to load books:", error)
-                setBooks([])
+                console.error("Error loading books:", error)
             } finally {
-                setLoading(false)
+                setLoading(false) // Set loading to false after fetching (success or error)
             }
         }
-        getBooks()
+
+        loadBooks()
     }, [currentPage])
 
     const filteredBooks = useMemo(() => {

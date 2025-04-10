@@ -24,27 +24,26 @@ export default function ShopPage() {
     useEffect(() => {
         const loadBooks = async () => {
             try {
-                setLoading(true) // Set loading to true before fetching
-                const response = await fetchBooks(currentPage, 12) // Fetch page 1, 10 books per page
+                setLoading(true)
+                const response = await fetchBooks(currentPage, 12)
                 setBooks(response.data)
 
-                // Handle pagination based on response structure
                 if (
                     "pagination" in response &&
                     response.pagination &&
                     response.pagination.totalPages
                 ) {
-                    setTotalPages(response.pagination.totalPages) // Modern response
+                    setTotalPages(response.pagination.totalPages)
                 } else if ("totalPages" in response) {
-                    setTotalPages(response.totalPages) // Legacy response
+                    setTotalPages(response.totalPages)
                 } else {
                     console.warn("Pagination information not found in response")
-                    setTotalPages(1) // Fallback
+                    setTotalPages(1)
                 }
             } catch (error) {
                 console.error("Error loading books:", error)
             } finally {
-                setLoading(false) // Set loading to false after fetching (success or error)
+                setLoading(false)
             }
         }
 
@@ -155,7 +154,6 @@ export default function ShopPage() {
                             {isFiltersOpen ? "Hide Filters" : "Show Filters"}
                         </button>
 
-                        {/* Desktop sidebar */}
                         <aside className='hidden lg:block w-[280px] bg-deepGray p-4 rounded-lg'>
                             {sidebarContent}
                         </aside>

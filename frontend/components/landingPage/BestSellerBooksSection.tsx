@@ -4,7 +4,6 @@ import { motion } from "framer-motion"
 import { useState, useEffect } from "react"
 import BestSellerBookCard from "@/components/landingPage/BestSellerBookCard"
 
-// Define the book type matching the API response
 type BookProps = {
     _id: string
     title: string
@@ -12,6 +11,10 @@ type BookProps = {
     rating: number
     urlPath: string
     price: number
+    description: string
+    genre: string
+    pages_number: number
+    publication_year: number
 }
 
 const BestSellerBooksSection = () => {
@@ -43,7 +46,6 @@ const BestSellerBooksSection = () => {
 
     return (
         <section className='w-full bg-[#1B1B1B]'>
-            {/* Section Heading */}
             <div className='flex items-center justify-center'>
                 <h2
                     className={
@@ -54,7 +56,6 @@ const BestSellerBooksSection = () => {
                 </h2>
             </div>
 
-            {/* Loading and Error States */}
             {loading && (
                 <p className='text-center text-[#EAE0D5] py-8'>
                     Loading best sellers...
@@ -64,7 +65,6 @@ const BestSellerBooksSection = () => {
                 <p className='text-center text-red-500 py-8'>Error: {error}</p>
             )}
 
-            {/* Book Cards Section */}
             {!loading && !error && (
                 <motion.div
                     initial={{ opacity: 0, y: 20 }}

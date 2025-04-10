@@ -9,8 +9,31 @@ import ReviewProduct from "@/components/productPage/ReviewProduct"
 import BookDetailsSectionProduct from "@/components/productPage/BookDetailsSection"
 import RelatedBook from "@/components/productPage/RelatedBook"
 import { fetchBookById, fetchBooks } from "@/lib/api"
-import { Book } from "@/types/book"
 import { useCart } from "@/context/CartContext"
+interface Book {
+    _id: string
+    title: string
+    author: string
+    description: string
+    genre: string
+    urlPath: string
+    price: number
+    pages_number: number
+    publication_year: number
+    publisher?: string
+    language?: string
+    isbn?: string
+    author_bio?: string
+    reviews?: Review[]
+    reviews_number?: number
+}
+interface Review {
+    _id: string
+    user_id: string
+    rating: number
+    comment?: string
+    created_at: string
+}
 
 export default function BookPage() {
     const params = useParams()
@@ -27,15 +50,17 @@ export default function BookPage() {
             try {
                 setLoading(true)
                 const bookData = await fetchBookById(bookId)
-                const book = bookData.data
-                setBook(book)
+                setBook(bookData.data as Book)
 
                 const allBooks = await fetchBooks()
-                const filteredRelatedBooks = allBooks.data
+                const filteredRelatedBooks = (allBooks.data as Book[])
                     .filter(
-                        (b: Book) => b._id !== bookId && b.genre === book.genre
+                        (b) =>
+                            b._id !== bookId &&
+                            b.genre === (bookData.data as Book).genre
                     )
                     .slice(0, 4)
+
                 setRelatedBooks(filteredRelatedBooks)
             } catch (err) {
                 console.error("Failed to load book details:", err)
@@ -75,7 +100,7 @@ export default function BookPage() {
             book.author_bio || "Information about the author not available.",
         publisher: book.publisher || "Unknown publisher",
         language: book.language || "English",
-        pages_number: book.page_count,
+        pages_number: book.pages_number,
         isbn: book.isbn || "Not available",
     }
 
@@ -176,7 +201,7 @@ export default function BookPage() {
                     author={book.author}
                     reviews_number={book.reviews?.length || 0}
                     description={book.description}
-                    pages_number={book.page_count}
+                    pages_number={book.pages_number}
                     release_year={book.publication_year}
                     genre={book.genre}
                     price={book.price}
@@ -203,7 +228,7 @@ export default function BookPage() {
                                             review._id ||
                                             `${review.user_id}-${review.created_at}`
                                         }
-                                        id={review._id || 0}
+                                        id={review._id || "0"}
                                         author={review.user_id}
                                         rating={review.rating}
                                         text={review.comment || ""}

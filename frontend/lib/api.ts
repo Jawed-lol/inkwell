@@ -16,21 +16,23 @@ interface UserProfile {
 }
 
 interface Book {
-    id: string
+    _id: string
     title: string
     author: string
     price: number
+    genre: string
     description: string
-    imageUrl?: string
-    category?: string
-    isbn?: string
-    publishDate?: string
-    publisher?: string
-    pageCount?: number
+    urlPath: string
+    category: string
+    isbn: string
+    publication_year: number
+    publisher: string
+    pages_number: number
     inStock?: boolean
     rating?: number
-    language?: string
+    language: string
     format?: string
+    reviews_number?: number
 }
 
 interface BooksResponse {

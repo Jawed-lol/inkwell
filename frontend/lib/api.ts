@@ -39,7 +39,7 @@ interface BooksResponse {
     success: boolean
     message?: string
     data: Book[]
-    pagination?: {
+    pagination: {
         total: number
         page: number
         limit: number

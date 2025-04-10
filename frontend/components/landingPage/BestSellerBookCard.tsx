@@ -13,6 +13,10 @@ type BookProps = {
     rating: number
     urlPath: string
     price: number
+    description: string
+    genre: string
+    pages_number: number
+    publication_year: number
 }
 
 const BestSellerBookCard = ({
@@ -22,6 +26,10 @@ const BestSellerBookCard = ({
     rating,
     urlPath,
     price,
+    description,
+    genre,
+    pages_number,
+    publication_year,
 }: BookProps) => {
     const router = useRouter()
     const { addToCart } = useCart()
@@ -32,7 +40,18 @@ const BestSellerBookCard = ({
 
     const handleAddToCart = (e: React.MouseEvent) => {
         e.stopPropagation()
-        const book = { _id, title, author, rating, urlPath, price }
+        const book = {
+            _id,
+            title,
+            author,
+            rating,
+            urlPath,
+            price,
+            description,
+            genre,
+            pages_number,
+            publication_year,
+        }
         addToCart(book)
     }
 
@@ -42,9 +61,7 @@ const BestSellerBookCard = ({
                 "flex w-full bg-[#252525] rounded-xl p-4 md:p-6 lg:p-8 items-start gap-4 hover:scale-[1.03] transition duration-300 ease-in-out " +
                 "shadow-[0px_4px_10px_rgba(0,0,0,0.2)] hover:shadow-[0px_6px_15px_rgba(0,0,0,0.3)] cursor-pointer"
             }
-            onClick={handleCardClick} // Navigate to product page on card click
-        >
-            {/* Left Section: Image */}
+            onClick={handleCardClick}>
             <div className='w-[35%] flex-shrink-0'>
                 <Image
                     src={urlPath || "/images/fallback.jpg"}
@@ -54,10 +71,7 @@ const BestSellerBookCard = ({
                     className='w-full h-auto rounded-[8px] object-cover object-center shadow-[0px_4px_12px_rgba(0,0,0,0.3)] hover:scale-[1.03] transition duration-300 ease-in-out'
                 />
             </div>
-
-            {/* Right Section: Content */}
             <div className='flex flex-col w-[65%] justify-between'>
-                {/* Title, Author, Price, Rating */}
                 <div>
                     <h3 className='font-authorSans text-[#EAE0D5] font-bold text-[16px] md:text-[18px] lg:text-[20px] mb-2 md:mb-3'>
                         {title}
@@ -83,10 +97,9 @@ const BestSellerBookCard = ({
                     </div>
                 </div>
 
-                {/* Add to Cart Button */}
                 <div className='mt-auto'>
                     <Button
-                        onClick={handleAddToCart} // Add to cart on button click
+                        onClick={handleAddToCart}
                         className={
                             "bg-[#D68C45] hover:bg-[#B36E30] text-[#252525] font-generalSans font-semibold text-[14px] md:text-[15px] lg:text-[16px] " +
                             "w-full h-[40px] md:h-[45px] lg:h-[50px] rounded-[6px] py-2 px-4 transition duration-300 ease-in-out " +

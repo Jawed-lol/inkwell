@@ -12,6 +12,11 @@ interface AuthResponse {
     success: boolean
     message?: string
     token?: string
+    name?: string
+    email?: string
+    createdAt?: string
+    wishlistItems?: number
+    orderedItems?: number
     user?: UserProfile
 }
 
@@ -20,6 +25,7 @@ interface UserProfile {
     first_name: string
     second_name: string
     email: string
+    createdAt: string
 }
 
 interface Book {

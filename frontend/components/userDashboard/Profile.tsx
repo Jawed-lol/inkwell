@@ -22,11 +22,11 @@ export default function Profile() {
             const fetchProfile = async () => {
                 try {
                     const apiResponse = await getProfile(token)
-
+                    console.log("Profile API Response:", apiResponse) // Log the response
                     const formattedData = {
                         name: apiResponse.name || "",
                         email: apiResponse.email || "",
-                        createdAt: apiResponse.createdAt || "",
+                        createdAt: apiResponse.user?.createdAt || "",
                         wishlistItems: apiResponse.wishlistItems || 0,
                         orderedItems: apiResponse.orderedItems || 0,
                     }
@@ -138,7 +138,7 @@ export default function Profile() {
                         <p className='text-mutedSand text-sm sm:text-base'>
                             {profileData.wishlistItems}{" "}
                             <Link
-                                href='/dashboard/wishlist'
+                                href='/dashboard?tab=wishlist'
                                 className='text-burntAmber hover:underline'>
                                 View
                             </Link>

@@ -68,17 +68,20 @@ interface WishlistResponse {
 }
 
 interface OrderItem {
-    bookId: string
+    bookId: {
+        _id: string
+        title: string
+        urlPath: string
+    }
     quantity: number
     price: number
 }
 
 interface Order {
-    id: string
-    userId: string
+    _id: string
+    orderId: string
     items: OrderItem[]
-    totalAmount: number
-    status: string
+    total: number
     createdAt: string
 }
 

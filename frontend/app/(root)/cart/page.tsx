@@ -1,25 +1,26 @@
 "use client"
 
 import { motion, AnimatePresence } from "framer-motion"
-import Head from "next/head"
 import Image from "next/image"
 import { useCart } from "@/context/CartContext"
 import { XIcon } from "lucide-react"
 import Link from "next/link"
-import { useEffect } from "react"
+import { useEffect, useState } from "react"
 import { NextSeo } from "next-seo"
+import dynamic from "next/dynamic"
 
-// Define window with gtag for TypeScript
 declare global {
     interface Window {
         gtag?: (command: string, action: string, params: object) => void
     }
 }
 
-export default function CartPage() {
+function CartPage() {
     const { cart, updateQuantity, removeFromCart, clearCart } = useCart()
+    const [isClient, setIsClient] = useState(false)
 
     useEffect(() => {
+        setIsClient(true)
         if (typeof window !== "undefined" && window.gtag) {
             window.gtag("event", "page_view", {
                 page_title: "Shopping Cart",
@@ -73,6 +74,18 @@ export default function CartPage() {
 
     const structuredData = generateStructuredData()
 
+    if (!isClient) {
+        return (
+            <main className='pt-[120px] bg-gradient-to-b from-charcoalBlack to-deepGray min-h-screen'>
+                <div className='max-w-[1200px] mx-auto px-6 sm:px-8 md:px-12 py-8'>
+                    <p className='text-warmBeige text-center'>
+                        Loading cart...
+                    </p>
+                </div>
+            </main>
+        )
+    }
+
     return (
         <>
             <NextSeo
@@ -87,16 +100,13 @@ export default function CartPage() {
                     type: "website",
                 }}
                 noindex={true}
+                additionalMetaTags={[
+                    {
+                        name: "structured-data",
+                        content: JSON.stringify(structuredData),
+                    },
+                ]}
             />
-
-            <Head>
-                <script
-                    type='application/ld+json'
-                    dangerouslySetInnerHTML={{
-                        __html: JSON.stringify(structuredData),
-                    }}
-                />
-            </Head>
 
             <main className='pt-[120px] bg-gradient-to-b from-charcoalBlack to-deepGray min-h-screen'>
                 <div className='max-w-[1200px] mx-auto px-6 sm:px-8 md:px-12 py-8'>
@@ -244,3 +254,5 @@ export default function CartPage() {
         </>
     )
 }
+
+export default dynamic(() => Promise.resolve(CartPage), { ssr: false })

@@ -61,6 +61,11 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
     )
 
     useEffect(() => {
+        if (typeof window === "undefined") {
+            setLoading(false)
+            return
+        }
+
         const storedToken = localStorage.getItem("authToken")
 
         if (storedToken) {

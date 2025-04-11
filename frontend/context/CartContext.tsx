@@ -11,7 +11,6 @@ import {
 import { Book } from "@/types/book"
 import { useAuth } from "@/context/AuthContext"
 
-// Debounce utility function with specific typing for our use case
 function debounce<T extends (updatedCart: CartItem[]) => Promise<void>>(
     func: T,
     wait: number
@@ -56,12 +55,7 @@ const DEBOUNCE_DELAY = 500
 const CartContext = createContext<CartContextType | undefined>(undefined)
 
 export const CartProvider = ({ children }: { children: ReactNode }) => {
-    const [cart, setCart] = useState<CartItem[]>(() => {
-        if (typeof window === "undefined") return []
-        const savedCart = localStorage.getItem(CART_STORAGE_KEY)
-        return savedCart ? JSON.parse(savedCart) : []
-    })
-
+    const [cart, setCart] = useState<CartItem[]>([])
     const { token } = useAuth()
 
     const syncCartWithBackend = useCallback(
@@ -117,6 +111,13 @@ export const CartProvider = ({ children }: { children: ReactNode }) => {
     const debouncedSyncCart = debounce(syncCartWithBackend, DEBOUNCE_DELAY)
 
     useEffect(() => {
+        if (typeof window === "undefined") return
+
+        const savedCart = localStorage.getItem(CART_STORAGE_KEY)
+        if (savedCart) {
+            setCart(JSON.parse(savedCart))
+        }
+
         const loadCartFromBackend = async () => {
             if (!token) {
                 const emptyCart: CartItem[] = []
@@ -158,7 +159,9 @@ export const CartProvider = ({ children }: { children: ReactNode }) => {
     }, [token, syncCartWithBackend])
 
     useEffect(() => {
-        localStorage.setItem(CART_STORAGE_KEY, JSON.stringify(cart))
+        if (typeof window !== "undefined") {
+            localStorage.setItem(CART_STORAGE_KEY, JSON.stringify(cart))
+        }
     }, [cart])
 
     const addToCart = useCallback(

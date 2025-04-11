@@ -77,7 +77,6 @@ const HeroSectionProduct = ({
         }
     }
 
-    // Schema.org structured data
     const schemaData = {
         "@context": "https://schema.org",
         "@type": "Book",

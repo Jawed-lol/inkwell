@@ -27,21 +27,10 @@ export default function ShopPage() {
                 setLoading(true)
                 const response = await fetchBooks(currentPage, 12)
                 setBooks(response.data)
-
-                if (
-                    "pagination" in response &&
-                    response.pagination &&
-                    response.pagination.totalPages
-                ) {
-                    setTotalPages(response.pagination.totalPages)
-                } else if ("totalPages" in response) {
-                    setTotalPages(response.totalPages)
-                } else {
-                    console.warn("Pagination information not found in response")
-                    setTotalPages(1)
-                }
+                setTotalPages(response.totalPages ?? 1) // Fallback to 1 if totalPages is undefined
             } catch (error) {
                 console.error("Error loading books:", error)
+                setTotalPages(1) // Fallback in case of error
             } finally {
                 setLoading(false)
             }

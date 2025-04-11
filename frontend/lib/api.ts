@@ -1,32 +1,6 @@
-const BASE_URL = process.env.NEXT_PUBLIC_API_URL
+const BASE_URL = process.env.NEXT_PUBLIC_API_URL || "http://localhost:3000"
+
 import axios from "axios"
-
-export interface LegacyBooksResponse {
-    success: boolean
-    message?: string
-    data: Book[]
-    totalPages: number
-}
-
-interface AuthResponse {
-    success: boolean
-    message?: string
-    token?: string
-    name?: string
-    email?: string
-    createdAt?: string
-    wishlistItems?: number
-    orderedItems?: number
-    user?: UserProfile
-}
-
-interface UserProfile {
-    id: string
-    first_name: string
-    second_name: string
-    email: string
-    createdAt: string
-}
 
 interface Book {
     _id: string
@@ -48,17 +22,36 @@ interface Book {
     reviews_number?: number
 }
 
-export interface BooksResponse {
+interface UserProfile {
+    id: string
+    first_name: string
+    second_name: string
+    email: string
+    createdAt: string
+}
+
+interface AuthResponse {
+    success: boolean
+    message?: string
+    token?: string
+    name?: string
+    email?: string
+    createdAt?: string
+    wishlistItems?: number
+    orderedItems?: number
+    user?: UserProfile
+}
+
+interface BooksResponse {
     success: boolean
     message?: string
     data: Book[]
-    pagination: Pagination
-}
-export interface Pagination {
-    total: number
-    page: number
-    limit: number
-    totalPages: number
+    pagination: {
+        total: number
+        page: number
+        limit: number
+        totalPages: number
+    }
 }
 
 interface BookResponse {
@@ -70,7 +63,7 @@ interface BookResponse {
 interface WishlistResponse {
     success: boolean
     message?: string
-    data: Book[]
+    data?: Book[]
 }
 
 interface OrderItem {
@@ -91,16 +84,42 @@ interface Order {
     createdAt: string
 }
 
+interface OrderResponse {
+    success: boolean
+    message?: string
+    data: Order
+}
+
 interface OrdersResponse {
     success: boolean
     message?: string
     data: Order[]
 }
 
-interface OrderResponse {
-    success: boolean
-    message?: string
-    data: Order
+// Shared request headers
+const getAuthHeaders = (token: string) => ({
+    "Content-Type": "application/json",
+    Authorization: `Bearer ${token}`,
+})
+
+// Shared error handler for axios
+const handleAxiosError = (error: unknown, defaultMessage: string): never => {
+    if (axios.isAxiosError(error) && error.response) {
+        throw new Error(error.response.data.message || defaultMessage)
+    }
+    throw new Error(defaultMessage)
+}
+
+// Shared fetch handler
+const handleFetchResponse = async (
+    response: Response,
+    errorMessage: string
+) => {
+    if (!response.ok) {
+        const errorData = await response.json().catch(() => ({}))
+        throw new Error(errorData.message || errorMessage)
+    }
+    return response.json()
 }
 
 export const registerUser = async (
@@ -110,25 +129,13 @@ export const registerUser = async (
     password: string
 ): Promise<AuthResponse> => {
     try {
-        console.log(`Registering user at: ${BASE_URL}/api/auth/register`)
         const response = await axios.post<AuthResponse>(
             `${BASE_URL}/api/auth/register`,
-            {
-                first_name,
-                second_name,
-                email,
-                password,
-            }
+            { first_name, second_name, email, password }
         )
         return response.data
     } catch (error) {
-        console.error("Error registering user:", error)
-        if (axios.isAxiosError(error) && error.response) {
-            throw new Error(
-                error.response.data.message || "Registration failed"
-            )
-        }
-        throw error
+        return handleAxiosError(error, "Registration failed")
     }
 }
 
@@ -141,12 +148,7 @@ export const loginUser = async (
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ email, password }),
     })
-
-    if (!response.ok) {
-        throw new Error("Login failed")
-    }
-
-    return response.json() as Promise<AuthResponse>
+    return handleFetchResponse(response, "Login failed")
 }
 
 export const addToWishlist = async (
@@ -155,30 +157,19 @@ export const addToWishlist = async (
 ): Promise<WishlistResponse> => {
     const response = await fetch(`${BASE_URL}/api/auth/wishlist`, {
         method: "POST",
-        headers: {
-            "Content-Type": "application/json",
-            Authorization: `Bearer ${token}`,
-        },
+        headers: getAuthHeaders(token),
         body: JSON.stringify({ bookId }),
     })
-
-    if (!response.ok) {
-        throw new Error("Failed to add to wishlist")
-    }
-
-    return response.json() as Promise<WishlistResponse>
+    return handleFetchResponse(response, "Failed to add to wishlist")
 }
 
-export const getWishlist = async (token: string): Promise<WishlistResponse> => {
+export const getWishlist = async (
+    token: string
+): Promise<WishlistResponse | Book[]> => {
     const response = await fetch(`${BASE_URL}/api/auth/wishlist`, {
-        headers: { Authorization: `Bearer ${token}` },
+        headers: getAuthHeaders(token),
     })
-
-    if (!response.ok) {
-        throw new Error("Failed to fetch wishlist")
-    }
-
-    return response.json() as Promise<WishlistResponse>
+    return handleFetchResponse(response, "Failed to fetch wishlist")
 }
 
 export const removeFromWishlist = async (
@@ -187,97 +178,66 @@ export const removeFromWishlist = async (
 ): Promise<WishlistResponse> => {
     const response = await fetch(`${BASE_URL}/api/auth/wishlist/${bookId}`, {
         method: "DELETE",
-        headers: { Authorization: `Bearer ${token}` },
+        headers: getAuthHeaders(token),
     })
-
-    if (!response.ok) {
-        throw new Error("Failed to remove from wishlist")
-    }
-
-    return response.json() as Promise<WishlistResponse>
+    return handleFetchResponse(response, "Failed to remove from wishlist")
 }
 
 export const fetchBooks = async (
     page = 1,
     limit = 12
-): Promise<BooksResponse | LegacyBooksResponse> => {
-    const response = await axios.get(`${BASE_URL}/api/books`, {
-        params: { page, limit },
-    })
-    return response.data
+): Promise<BooksResponse> => {
+    try {
+        const response = await axios.get<BooksResponse>(
+            `${BASE_URL}/api/books`,
+            {
+                params: { page, limit },
+            }
+        )
+        return response.data
+    } catch (error) {
+        return handleAxiosError(error, "Failed to fetch books")
+    }
 }
 
 export const fetchBookById = async (id: string): Promise<BookResponse> => {
     try {
-        console.log(`Fetching book by ID at: ${BASE_URL}/api/books/${id}`)
         const response = await axios.get<BookResponse>(
             `${BASE_URL}/api/books/${id}`
         )
-
         if (!response.data.success) {
             throw new Error(response.data.message || "Failed to fetch book")
         }
-
         return response.data
     } catch (error) {
-        console.error("Error fetching book by ID:", error)
-        if (axios.isAxiosError(error) && error.response) {
-            throw new Error(
-                error.response.data.message || "Failed to fetch book"
-            )
-        }
-        throw error
+        return handleAxiosError(error, "Failed to fetch book")
     }
-}
-
-interface ProfileUpdateData {
-    firstName?: string
-    lastName?: string
-    email?: string
 }
 
 export const updateProfile = async (
     token: string,
-    data: ProfileUpdateData
+    data: { firstName?: string; lastName?: string; email?: string }
 ): Promise<AuthResponse> => {
     const response = await fetch(`${BASE_URL}/api/auth/profile`, {
         method: "PUT",
-        headers: {
-            "Content-Type": "application/json",
-            Authorization: `Bearer ${token}`,
-        },
+        headers: getAuthHeaders(token),
         body: JSON.stringify(data),
     })
-
-    if (!response.ok) {
-        throw new Error("Failed to update profile")
-    }
-
-    return response.json() as Promise<AuthResponse>
+    return handleFetchResponse(response, "Failed to update profile")
 }
 
 export const getProfile = async (token: string): Promise<AuthResponse> => {
     const response = await fetch(`${BASE_URL}/api/auth/profile`, {
-        headers: { Authorization: `Bearer ${token}` },
+        headers: getAuthHeaders(token),
     })
-
-    if (!response.ok) {
-        throw new Error("Failed to fetch profile")
-    }
-
-    return response.json() as Promise<AuthResponse>
+    return handleFetchResponse(response, "Failed to fetch profile")
 }
 
 export const getOrders = async (token: string): Promise<OrdersResponse> => {
     const response = await fetch(`${BASE_URL}/api/auth/orders`, {
-        headers: { Authorization: `Bearer ${token}` },
+        headers: getAuthHeaders(token),
     })
-
-    if (!response.ok) {
-        throw new Error("Failed to fetch orders")
-    }
-
-    return response.json() as Promise<OrdersResponse>
+    return handleFetchResponse(response, "Failed to fetch orders")
 }
 
 export const placeOrder = async (
@@ -286,16 +246,8 @@ export const placeOrder = async (
 ): Promise<OrderResponse> => {
     const response = await fetch(`${BASE_URL}/api/orders`, {
         method: "POST",
-        headers: {
-            "Content-Type": "application/json",
-            Authorization: `Bearer ${token}`,
-        },
+        headers: getAuthHeaders(token),
         body: JSON.stringify({ items }),
     })
-
-    if (!response.ok) {
-        throw new Error("Failed to place order")
-    }
-
-    return response.json() as Promise<OrderResponse>
+    return handleFetchResponse(response, "Failed to place order")
 }

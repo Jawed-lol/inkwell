@@ -5,6 +5,7 @@ import { useState, useEffect, useCallback } from "react"
 import { getWishlist, removeFromWishlist } from "@/lib/api"
 import { Trash2, ShoppingCart } from "lucide-react"
 import Image from "next/image"
+import Head from "next/head"
 import { motion } from "framer-motion"
 
 interface Book {
@@ -18,105 +19,217 @@ interface Book {
 export default function Wishlist() {
     const { user, token, loading } = useAuth()
     const [wishlist, setWishlist] = useState<Book[]>([])
-    const [fetchError, setFetchError] = useState<string | null>(null)
+    const [error, setError] = useState<string | null>(null)
 
     const fetchWishlist = useCallback(async () => {
         if (!token) return
 
         try {
             const data = await getWishlist(token)
-            setWishlist(data)
-            setFetchError(null)
+            setWishlist(
+                Array.isArray(data)
+                    ? data
+                    : Array.isArray(data.data)
+                      ? data.data
+                      : []
+            )
+            setError(null)
         } catch {
-            setFetchError("Failed to load wishlist. Please try again.")
+            setError("Failed to load wishlist. Please try again.")
+            setWishlist([])
         }
     }, [token])
 
     useEffect(() => {
-        if (token) {
+        if (token && !loading) {
             fetchWishlist()
         }
-    }, [token, fetchWishlist])
+    }, [token, loading, fetchWishlist])
 
     const handleRemove = async (bookId: string) => {
+        if (!token) return
+
         try {
-            await removeFromWishlist(token!, bookId)
+            await removeFromWishlist(token, bookId)
             setWishlist(wishlist.filter((book) => book._id !== bookId))
         } catch {
-            setFetchError("Failed to remove item. Please try again.")
+            setError("Failed to remove item. Please try again.")
         }
+    }
+
+    const handleAddToCart = (bookId: string) => {
+        // Placeholder for cart functionality
+        console.log("Add to cart:", bookId)
+    }
+
+    // Schema.org structured data for SEO
+    const schemaData = {
+        "@context": "https://schema.org",
+        "@type": "ItemList",
+        itemListElement: wishlist.map((book, index) => ({
+            "@type": "ListItem",
+            position: index + 1,
+            item: {
+                "@type": "Book",
+                name: book.title,
+                author: book.author || "Unknown Author",
+                offers: {
+                    "@type": "Offer",
+                    price: book.price,
+                    priceCurrency: "USD",
+                },
+                image: book.urlPath || "/placeholder.svg",
+            },
+        })),
     }
 
     if (loading) {
         return (
-            <div className='text-mutedSand text-center'>
-                Loading wishlist...
+            <div
+                className='text-mutedSand text-center py-10'
+                role='status'>
+                Loading your wishlist...
             </div>
         )
     }
 
     if (!user || !token) {
         return (
-            <div className='text-mutedSand text-center'>
-                Please log in to view your wishlist.
+            <div className='text-mutedSand text-center py-10'>
+                Please{" "}
+                <a
+                    href='/login'
+                    className='text-burntAmber underline'>
+                    log in
+                </a>{" "}
+                to view your wishlist.
             </div>
         )
     }
 
     return (
-        <div className='max-w-2xl mx-auto bg-deepGray p-6 rounded-lg shadow-lg'>
-            <h2 className='text-xl sm:text-2xl font-bold mb-6 text-center md:text-left text-warmBeige'>
-                Your Wishlist
-            </h2>
-            {fetchError && <p className='text-deepCopper mb-4'>{fetchError}</p>}
-            {wishlist.length === 0 ? (
-                <p className='text-mutedSand text-center'>
-                    Your wishlist is empty.
-                </p>
-            ) : (
-                <div className='space-y-4'>
-                    {wishlist.map((book) => (
-                        <motion.div
-                            key={book._id}
-                            initial={{ opacity: 0 }}
-                            animate={{ opacity: 1 }}
-                            className='flex items-center gap-4 bg-slightlyLightGrey p-4 rounded-lg'>
-                            <Image
-                                src={book.urlPath || "/placeholder.svg"}
-                                alt={`${book.title} cover`}
-                                width={80}
-                                height={120}
-                                className='rounded-lg'
-                            />
-                            <div className='flex-1'>
-                                <h3 className='text-warmBeige font-semibold'>
-                                    {book.title}
-                                </h3>
-                                <p className='text-mutedSand'>
-                                    by {book.author}
-                                </p>
-                                <p className='text-warmBeige font-bold'>
-                                    ${book.price.toFixed(2)}
-                                </p>
-                            </div>
-                            <div className='flex gap-2'>
-                                <button
-                                    onClick={() =>
-                                        console.log("Add to cart:", book._id)
-                                    }
-                                    className='p-2 bg-burntAmber text-darkMutedTeal rounded-lg hover:bg-deepCopper'>
-                                    <ShoppingCart size={20} />
-                                </button>
-                                <button
-                                    onClick={() => handleRemove(book._id)}
-                                    className='p-2 bg-deepCopper text-warmBeige rounded-lg hover:bg-burntAmber'>
-                                    <Trash2 size={20} />
-                                </button>
-                            </div>
-                        </motion.div>
-                    ))}
-                </div>
-            )}
-        </div>
+        <>
+            <Head>
+                <title>Your Wishlist | Bookstore</title>
+                <meta
+                    name='description'
+                    content='Explore your personalized wishlist of books at Bookstore. Save your favorite titles and add them to your cart anytime.'
+                />
+                <meta
+                    name='robots'
+                    content='index, follow'
+                />
+                <meta
+                    name='viewport'
+                    content='width=device-width, initial-scale=1'
+                />
+                <meta
+                    property='og:title'
+                    content='Your Wishlist | Bookstore'
+                />
+                <meta
+                    property='og:description'
+                    content='View and manage your favorite books in your Bookstore wishlist.'
+                />
+                <meta
+                    property='og:type'
+                    content='website'
+                />
+                <meta
+                    property='og:image'
+                    content='/og-image.jpg'
+                />{" "}
+                {/* Replace with actual image */}
+                <meta
+                    name='twitter:card'
+                    content='summary_large_image'
+                />
+                <meta
+                    name='twitter:title'
+                    content='Your Wishlist | Bookstore'
+                />
+                <meta
+                    name='twitter:description'
+                    content='View and manage your favorite books in your Bookstore wishlist.'
+                />
+            </Head>
+            <script
+                type='application/ld+json'
+                dangerouslySetInnerHTML={{ __html: JSON.stringify(schemaData) }}
+            />
+            <section className='max-w-2xl mx-auto bg-deepGray p-6 rounded-lg shadow-lg my-8'>
+                <h1 className='text-xl sm:text-2xl font-bold mb-6 text-center md:text-left text-warmBeige'>
+                    Your Wishlist
+                </h1>
+                {error && (
+                    <p
+                        className='text-deepCopper mb-4 text-center'
+                        role='alert'>
+                        {error}
+                    </p>
+                )}
+                {wishlist.length === 0 ? (
+                    <p className='text-mutedSand text-center py-10'>
+                        Your wishlist is empty.{" "}
+                        <a
+                            href='/books'
+                            className='text-burntAmber underline'>
+                            Browse books
+                        </a>{" "}
+                        to add some!
+                    </p>
+                ) : (
+                    <div className='space-y-4'>
+                        {wishlist.map((book) => (
+                            <motion.article
+                                key={book._id}
+                                initial={{ opacity: 0 }}
+                                animate={{ opacity: 1 }}
+                                transition={{ duration: 0.3 }}
+                                className='flex items-center gap-4 bg-slightlyLightGrey p-4 rounded-lg'
+                                aria-labelledby={`book-title-${book._id}`}>
+                                <Image
+                                    src={book.urlPath || "/placeholder.svg"}
+                                    alt={`${book.title} cover`}
+                                    width={80}
+                                    height={120}
+                                    className='rounded-lg object-cover'
+                                    loading='lazy'
+                                />
+                                <div className='flex-1'>
+                                    <h2
+                                        id={`book-title-${book._id}`}
+                                        className='text-warmBeige font-semibold text-lg'>
+                                        {book.title}
+                                    </h2>
+                                    <p className='text-mutedSand'>
+                                        by {book.author || "Unknown Author"}
+                                    </p>
+                                    <p className='text-warmBeige font-bold'>
+                                        ${book.price.toFixed(2)}
+                                    </p>
+                                </div>
+                                <div className='flex gap-2'>
+                                    <button
+                                        onClick={() =>
+                                            handleAddToCart(book._id)
+                                        }
+                                        className='p-2 bg-burntAmber text-darkMutedTeal rounded-lg hover:bg-deepCopper focus:outline-none focus:ring-2 focus:ring-burntAmber'
+                                        aria-label={`Add ${book.title} to cart`}>
+                                        <ShoppingCart size={20} />
+                                    </button>
+                                    <button
+                                        onClick={() => handleRemove(book._id)}
+                                        className='p-2 bg-deepCopper text-warmBeige rounded-lg hover:bg-burntAmber focus:outline-none focus:ring-2 focus:ring-deepCopper'
+                                        aria-label={`Remove ${book.title} from wishlist`}>
+                                        <Trash2 size={20} />
+                                    </button>
+                                </div>
+                            </motion.article>
+                        ))}
+                    </div>
+                )}
+            </section>
+        </>
     )
 }

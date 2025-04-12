@@ -6,19 +6,34 @@ import { useState } from "react"
 import { registerUser } from "@/lib/api"
 import Head from "next/head"
 
+interface FormData {
+    first_name: string
+    second_name: string
+    email: string
+    password: string
+    confirm_password: string
+}
+
 export default function Register() {
-    const [formData, setFormData] = useState({
+    const [formData, setFormData] = useState<FormData>({
         first_name: "",
         second_name: "",
         email: "",
         password: "",
+        confirm_password: "",
     })
     const [error, setError] = useState<string | null>(null)
-    const [message, setMessage] = useState("")
-    const [isSubmitting, setIsSubmitting] = useState(false)
+    const [message, setMessage] = useState<string>("")
+    const [isSubmitting, setIsSubmitting] = useState<boolean>(false)
+    const [showPassword, setShowPassword] = useState<boolean>(false)
+    const [showConfirmPassword, setShowConfirmPassword] =
+        useState<boolean>(false)
 
     const handleChange = (e: React.ChangeEvent<HTMLInputElement>) => {
-        setFormData({ ...formData, [e.target.name]: e.target.value })
+        setFormData((prev) => ({
+            ...prev,
+            [e.target.name]: e.target.value,
+        }))
     }
 
     const handleSubmit = async (e: React.FormEvent) => {
@@ -27,15 +42,21 @@ export default function Register() {
         setMessage("")
         setIsSubmitting(true)
 
+        if (formData.password !== formData.confirm_password) {
+            setError("Passwords do not match")
+            setIsSubmitting(false)
+            return
+        }
+
         try {
             const data = await registerUser(
-                formData.first_name || "",
-                formData.second_name || "",
-                formData.email || "",
-                formData.password || ""
+                formData.first_name,
+                formData.second_name,
+                formData.email,
+                formData.password
             )
 
-            if (data && data.token) {
+            if (data?.token) {
                 localStorage.setItem("token", data.token)
                 setMessage(
                     "Account created successfully! Redirecting to login page..."
@@ -55,6 +76,10 @@ export default function Register() {
             setIsSubmitting(false)
         }
     }
+
+    const togglePasswordVisibility = () => setShowPassword((prev) => !prev)
+    const toggleConfirmPasswordVisibility = () =>
+        setShowConfirmPassword((prev) => !prev)
 
     const pageTitle = "Create Your Account | Inkwell"
     const pageDescription =
@@ -91,9 +116,9 @@ export default function Register() {
             </Head>
 
             <main
-                className='bg-charcoalBlack py-16 min-h-screen flex justify-center items-center md:py-20 lg:py-24'
+                className='flex min-h-screen items-center justify-center bg-charcoalBlack py-16 md:py-20 lg:py-24'
                 aria-labelledby='registration-heading'>
-                <section className='p-4 max-w-md w-full bg-deepGray rounded-2xl md:p-6 lg:p-8 flex flex-col items-center justify-center shadow-lg'>
+                <section className='flex w-full max-w-md flex-col items-center justify-center rounded-2xl bg-deepGray p-4 shadow-lg md:p-6 lg:p-8'>
                     <Image
                         src='/images/weblogo.png'
                         alt='Inkwell - Your book community'
@@ -104,23 +129,23 @@ export default function Register() {
                     />
                     <h1
                         id='registration-heading'
-                        className='text-center font-author font-bold text-lg text-warmBeige md:text-xl lg:text-2xl mb-2'>
+                        className='mb-2 text-center font-author text-lg font-bold text-warmBeige md:text-xl lg:text-2xl'>
                         Create Your Account
                     </h1>
-                    <p className='font-generalSans text-center text-xs text-mutedSand md:text-sm lg:text-base mb-6'>
+                    <p className='mb-6 text-center font-generalSans text-xs text-mutedSand md:text-sm lg:text-base'>
                         Join our community and start exploring your favorite
                         books today.
                     </p>
 
                     <form
                         onSubmit={handleSubmit}
-                        className='w-full flex flex-col gap-4'
+                        className='flex w-full flex-col gap-4'
                         aria-label='Registration form'>
                         <div className='flex flex-col gap-4 md:flex-row md:gap-2'>
-                            <div className='flex flex-col w-full'>
+                            <div className='flex w-full flex-col'>
                                 <label
                                     htmlFor='first_name'
-                                    className='text-warmBeige font-bold text-sm mb-1 md:text-base'>
+                                    className='mb-1 text-sm font-bold text-warmBeige md:text-base'>
                                     First Name
                                 </label>
                                 <input
@@ -130,16 +155,15 @@ export default function Register() {
                                     value={formData.first_name}
                                     onChange={handleChange}
                                     required
-                                    aria-required='true'
                                     placeholder='Enter your first name'
-                                    className='bg-slightlyLightGrey border border-darkMocha rounded-lg font-generalSans text-mutedSand text-xs md:text-sm lg:text-base py-2 px-3 w-full focus:border-burntAmber focus:outline-none transition-colors duration-200'
+                                    className='w-full rounded-lg border border-darkMocha bg-slightlyLightGrey px-3 py-2 text-xs text-mutedSand transition-colors duration-200 focus:border-burntAmber focus:outline-none md:text-sm lg:text-base'
                                 />
                             </div>
 
-                            <div className='flex flex-col w-full'>
+                            <div className='flex w-full flex-col'>
                                 <label
                                     htmlFor='second_name'
-                                    className='text-warmBeige font-bold text-sm mb-1 md:text-base'>
+                                    className='mb-1 text-sm font-bold text-warmBeige md:text-base'>
                                     Last Name
                                 </label>
                                 <input
@@ -149,9 +173,8 @@ export default function Register() {
                                     value={formData.second_name}
                                     onChange={handleChange}
                                     required
-                                    aria-required='true'
                                     placeholder='Enter your last name'
-                                    className='bg-slightlyLightGrey border border-darkMocha rounded-lg font-generalSans text-mutedSand text-xs md:text-sm lg:text-base py-2 px-3 w-full focus:border-burntAmber focus:outline-none transition-colors duration-200'
+                                    className='w-full rounded-lg border border-darkMocha bg-slightlyLightGrey px-3 py-2 text-xs text-mutedSand transition-colors duration-200 focus:border-burntAmber focus:outline-none md:text-sm lg:text-base'
                                 />
                             </div>
                         </div>
@@ -159,7 +182,7 @@ export default function Register() {
                         <div className='flex flex-col'>
                             <label
                                 htmlFor='email'
-                                className='text-warmBeige font-bold text-sm mb-1 md:text-base'>
+                                className='mb-1 text-sm font-bold text-warmBeige md:text-base'>
                                 Email Address
                             </label>
                             <input
@@ -169,55 +192,150 @@ export default function Register() {
                                 value={formData.email}
                                 onChange={handleChange}
                                 required
-                                aria-required='true'
                                 placeholder='your.email@example.com'
-                                className='bg-slightlyLightGrey border border-darkMocha rounded-lg font-generalSans text-mutedSand text-xs md:text-sm lg:text-base py-2 px-3 w-full focus:border-burntAmber focus:outline-none transition-colors duration-200'
+                                className='w-full rounded-lg border border-darkMocha bg-slightlyLightGrey px-3 py-2 text-xs text-mutedSand transition-colors duration-200 focus:border-burntAmber focus:outline-none md:text-sm lg:text-base'
                             />
                         </div>
 
-                        <div className='flex flex-col'>
+                        <div className='relative flex flex-col'>
                             <label
                                 htmlFor='password'
-                                className='text-warmBeige font-bold text-sm mb-1 md:text-base'>
+                                className='mb-1 text-sm font-bold text-warmBeige md:text-base'>
                                 Password
                             </label>
                             <input
                                 id='password'
-                                type='password'
+                                type={showPassword ? "text" : "password"}
                                 name='password'
                                 value={formData.password}
                                 onChange={handleChange}
                                 required
-                                aria-required='true'
                                 minLength={8}
                                 placeholder='Create a secure password'
-                                className='bg-slightlyLightGrey border border-darkMocha rounded-lg font-generalSans text-mutedSand text-xs md:text-sm lg:text-base py-2 px-3 w-full focus:border-burntAmber focus:outline-none transition-colors duration-200'
+                                className='w-full rounded-lg border border-darkMocha bg-slightlyLightGrey px-3 py-2 text-xs text-mutedSand transition-colors duration-200 focus:border-burntAmber focus:outline-none md:text-sm lg:text-base'
                             />
-                            <p className='text-mutedSand text-xs mt-1'>
+                            <button
+                                type='button'
+                                onClick={togglePasswordVisibility}
+                                className='absolute right-3 top-9 flex items-center justify-center text-mutedSand hover:text-burntAmber'
+                                aria-label={
+                                    showPassword
+                                        ? "Hide password"
+                                        : "Show password"
+                                }>
+                                <svg
+                                    className='h-6 w-6 md:h-7 md:w-7'
+                                    fill='none'
+                                    stroke='currentColor'
+                                    viewBox='0 0 24 24'>
+                                    {showPassword ? (
+                                        <path
+                                            strokeLinecap='round'
+                                            strokeLinejoin='round'
+                                            strokeWidth='2'
+                                            d='M13.875 18.825A10.05 10.05 0 0112 19c-4.478 0-8.268-2.943-9.543-7a9.97 9.97 0 011.563-3.029m5.858.908a3 3 0 114.243 4.243M9.878 9.878l4.242 4.242M9.88 9.88l-3.29-3.29m7.532 7.532l3.29 3.29M3 3l3.59 3.59m0 0A9.953 9.953 0 0112 5c4.478 0 8.268 2.943 9.543 7a10.025 10.025 0 01-4.132 5.79m0 0L21 21'
+                                        />
+                                    ) : (
+                                        <>
+                                            <path
+                                                strokeLinecap='round'
+                                                strokeLinejoin='round'
+                                                strokeWidth='2'
+                                                d='M15 12a3 3 0 11-6 0 3 3 0 016 0z'
+                                            />
+                                            <path
+                                                strokeLinecap='round'
+                                                strokeLinejoin='round'
+                                                strokeWidth='2'
+                                                d='M2.458 12C3.732 7.943 7.523 5 12 5c4.478 0 8.268 2.943 9.542 7-1.274 4.057-5.064 7-9.542 7-4.477 0-8.268-2.943-9.542-7z'
+                                            />
+                                        </>
+                                    )}
+                                </svg>
+                            </button>
+                            <p className='mt-1 text-xs text-mutedSand'>
                                 Must be at least 8 characters
                             </p>
+                        </div>
+
+                        <div className='relative flex flex-col'>
+                            <label
+                                htmlFor='confirm_password'
+                                className='mb-1 text-sm font-bold text-warmBeige md:text-base'>
+                                Confirm Password
+                            </label>
+                            <input
+                                id='confirm_password'
+                                type={showConfirmPassword ? "text" : "password"}
+                                name='confirm_password'
+                                value={formData.confirm_password}
+                                onChange={handleChange}
+                                required
+                                minLength={8}
+                                placeholder='Confirm your password'
+                                className='w-full rounded-lg border border-darkMocha bg-slightlyLightGrey px-3 py-2 text-xs text-mutedSand transition-colors duration-200 focus:border-burntAmber focus:outline-none md:text-sm lg:text-base'
+                            />
+                            <button
+                                type='button'
+                                onClick={toggleConfirmPasswordVisibility}
+                                className='absolute right-3 top-9 flex items-center justify-center text-mutedSand hover:text-burntAmber'
+                                aria-label={
+                                    showConfirmPassword
+                                        ? "Hide password"
+                                        : "Show password"
+                                }>
+                                <svg
+                                    className='h-6 w-6 md:h-7 md:w-7'
+                                    fill='none'
+                                    stroke='currentColor'
+                                    viewBox='0 0 24 24'>
+                                    {showConfirmPassword ? (
+                                        <path
+                                            strokeLinecap='round'
+                                            strokeLinejoin='round'
+                                            strokeWidth='2'
+                                            d='M13.875 18.825A10.05 10.05 0 0112 19c-4.478 0-8.268-2.943-9.543-7a9.97 9.97 0 011.563-3.029m5.858.908a3 3 0 114.243 4.243M9.878 9.878l4.242 4.242M9.88 9.88l-3.29-3.29m7.532 7.532l3.29 3.29M3 3l3.59 3.59m0 0A9.953 9.953 0 0112 5c4.478 0 8.268 2.943 9.543 7a10.025 10.025 0 01-4.132 5.79m0 0L21 21'
+                                        />
+                                    ) : (
+                                        <>
+                                            <path
+                                                strokeLinecap='round'
+                                                strokeLinejoin='round'
+                                                strokeWidth='2'
+                                                d='M15 12a3 3 0 11-6 0 3 3 0 016 0z'
+                                            />
+                                            <path
+                                                strokeLinecap='round'
+                                                strokeLinejoin='round'
+                                                strokeWidth='2'
+                                                d='M2.458 12C3.732 7.943 7.523 5 12 5c4.478 0 8.268 2.943 9.542 7-1.274 4.057-5.064 7-9.542 7-4.477 0-8.268-2.943-9.542-7z'
+                                            />
+                                        </>
+                                    )}
+                                </svg>
+                            </button>
                         </div>
 
                         <button
                             type='submit'
                             disabled={isSubmitting}
-                            className='font-author font-bold text-sm md:text-base lg:text-lg bg-burntAmber rounded-lg py-2 px-4 w-full text-warmBeige hover:bg-deepCopper active:scale-95 transition-all duration-200 disabled:opacity-70 disabled:cursor-not-allowed'>
+                            className='w-full rounded-lg bg-burntAmber px-4 py-2 font-author text-sm font-bold text-warmBeige transition-all duration-200 hover:bg-deepCopper active:scale-95 disabled:cursor-not-allowed disabled:opacity-70 md:text-base lg:text-lg'>
                             {isSubmitting ? "Creating Account..." : "Register"}
                         </button>
                     </form>
 
-                    <p className='text-burntAmber text-xs md:text-sm text-center mt-4'>
+                    <p className='mt-4 text-center text-xs text-burntAmber md:text-sm'>
                         Already have an account?{" "}
                         <Link
                             href='/login'
-                            className='hover:text-deepCopper transition-colors duration-200'>
+                            className='transition-colors duration-200 hover:text-deepCopper'>
                             Sign In
                         </Link>
                     </p>
 
                     {message && (
                         <div
-                            className='font-generalSans text-burntAmber text-xs md:text-sm lg:text-base text-center mt-2 md:mt-3 lg:mt-4 leading-5 md:leading-6 lg:leading-7 bg-deepGray border border-burntAmber rounded-lg py-2 px-3 md:py-2.5 md:px-4 lg:py-3 lg:px-5'
+                            className='mt-4 rounded-lg border border-burntAmber bg-deepGray px-4 py-3 text-center font-generalSans text-xs text-burntAmber md:text-sm lg:text-base'
                             role='status'
                             aria-live='polite'>
                             {message}
@@ -225,7 +343,7 @@ export default function Register() {
                     )}
                     {error && (
                         <div
-                            className='font-generalSans text-deepCopper text-xs md:text-sm lg:text-base text-center mt-2 md:mt-3 lg:mt-4 leading-5 md:leading-6 lg:leading-7 bg-deepGray border border-deepCopper rounded-lg py-2 px-3 md:py-2.5 md:px-4 lg:py-3 lg:px-5'
+                            className='mt-4 rounded-lg border border-deepCopper bg-deepGray px-4 py-3 text-center font-generalSans text-xs text-deepCopper md:text-sm lg:text-base'
                             role='alert'>
                             {error}
                         </div>

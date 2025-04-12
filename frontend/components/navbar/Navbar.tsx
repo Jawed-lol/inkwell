@@ -1,4 +1,3 @@
-// components/Navbar.tsx
 "use client"
 
 import Image from "next/image"
@@ -14,8 +13,8 @@ import { motion, AnimatePresence } from "framer-motion"
 
 const itemsLinks = [
     { label: "Home", href: "/" },
-    { label: "About", href: "/about" },
     { label: "Store", href: "/shop" },
+    { label: "About", href: "/about" },
 ]
 
 const Navbar = () => {
@@ -40,7 +39,7 @@ const Navbar = () => {
     return (
         <>
             <nav
-                className='bg-charcoalBlack text-warmBeige w-full fixed top-0 left-0 right-0 z-40 border-b border-darkMocha shadow-md'
+                className='bg-charcoalBlack text-warmBeige w-full fixed top-0 z-40 border-b border-darkMocha shadow-md flex justify-center items-center'
                 aria-label='Main Navigation'>
                 <div className='container flex items-center justify-between py-4 px-6 lg:px-8 gap-4 lg:gap-6'>
                     {/* Left Section: Logo & Navigation */}
@@ -112,7 +111,7 @@ const Navbar = () => {
                                                 variants={dropdownVariants}
                                                 className='absolute right-0 mt-2 w-48 bg-deepGray rounded-lg shadow-lg py-2 text-warmBeige z-50'>
                                                 <Link
-                                                    href='/dashboard?tab=settings'
+                                                    href='/dashboard?tab=profile'
                                                     className='block px-4 py-2 hover:bg-burntAmber hover:text-darkMutedTeal rounded-lg text-center'
                                                     onClick={() =>
                                                         setIsDropdownOpen(false)
@@ -120,12 +119,12 @@ const Navbar = () => {
                                                     Profile
                                                 </Link>
                                                 <Link
-                                                    href='/dashboard'
+                                                    href='/dashboard?tab=orders'
                                                     className='block px-4 py-2 hover:bg-burntAmber hover:text-darkMutedTeal rounded-lg text-center'
                                                     onClick={() =>
                                                         setIsDropdownOpen(false)
                                                     }>
-                                                    Dashboard
+                                                    Orders
                                                 </Link>
                                                 <button
                                                     onClick={() => {

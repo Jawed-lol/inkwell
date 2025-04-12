@@ -1,4 +1,5 @@
-// PriceRangeFilter.tsx
+import { Slider } from "@/components/ui/slider"
+
 interface PriceRangeFilterProps {
     priceRange: [number, number]
     onChange: (range: [number, number]) => void
@@ -10,33 +11,36 @@ export default function PriceRangeFilter({
 }: PriceRangeFilterProps) {
     const [min, max] = priceRange
 
+    const handleSliderChange = (value: number[]) => {
+        if (value.length === 2) {
+            onChange([Math.max(0, value[0]), Math.max(0, value[1])])
+        }
+    }
+
     return (
         <div className='mb-4'>
             <h3 className='text-mutedSand text-sm mb-3 font-generalSans leading-5'>
                 Price Range
             </h3>
-            <div className='flex items-center'>
-                <input
-                    type='number'
-                    value={min}
-                    onChange={(e) =>
-                        onChange([parseInt(e.target.value) || 0, max])
-                    }
-                    className='font-generalSans bg-slightlyLightGrey border border-darkMocha rounded-[4px] px-3 py-2.5 text-mutedSand placeholder-mutedSand w-[100px] h-9'
-                    placeholder='Min'
-                    aria-label='Minimum price'
+            <div className='space-y-4'>
+                <Slider
+                    value={[min, max]}
+                    onValueChange={handleSliderChange}
+                    min={0}
+                    max={100}
+                    step={1}
+                    minStepsBetweenThumbs={1}
+                    className='w-full'
+                    aria-label='Price range slider'
                 />
-                <span className='text-mutedSand mx-2'>to</span>
-                <input
-                    type='number'
-                    value={max}
-                    onChange={(e) =>
-                        onChange([min, parseInt(e.target.value) || 100])
-                    }
-                    className='font-generalSans bg-slightlyLightGrey border border-darkMocha rounded-[4px] px-3 py-2.5 text-mutedSand placeholder-mutedSand w-[100px] h-9'
-                    placeholder='Max'
-                    aria-label='Maximum price'
-                />
+                <div className='flex justify-between'>
+                    <span className='text-mutedSand text-sm font-generalSans'>
+                        ${min}
+                    </span>
+                    <span className='text-mutedSand text-sm font-generalSans'>
+                        ${max}
+                    </span>
+                </div>
             </div>
         </div>
     )

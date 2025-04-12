@@ -1,7 +1,7 @@
 "use client"
 
 import { useState, useEffect } from "react"
-import { useRouter } from "next/navigation"
+import { useRouter, useSearchParams } from "next/navigation"
 import Head from "next/head"
 import Sidebar from "@/components/userDashboard/Sidebar"
 import Profile from "@/components/userDashboard/Profile"
@@ -30,25 +30,31 @@ const tabDescriptions: Record<Tab, string> = {
 
 export default function Dashboard() {
     const router = useRouter()
+    const searchParams = useSearchParams()
     const { user, loading } = useAuth()
 
     const [activeTab, setActiveTab] = useState<Tab>(() => {
-        if (typeof window !== "undefined") {
-            const tabFromQuery = new URLSearchParams(
-                window.location.search
-            ).get("tab") as Tab
-            return tabFromQuery &&
-                ["profile", "settings", "orders", "wishlist"].includes(
-                    tabFromQuery
-                )
-                ? tabFromQuery
-                : "profile"
-        }
-        return "profile"
+        const tabFromQuery = searchParams.get("tab") as Tab
+        return tabFromQuery &&
+            ["profile", "settings", "orders", "wishlist"].includes(tabFromQuery)
+            ? tabFromQuery
+            : "profile"
     })
+    const [isSidebarOpen, setIsSidebarOpen] = useState<boolean>(false)
+    const [pageTitle, setPageTitle] = useState<string>("")
 
-    const [isSidebarOpen, setIsSidebarOpen] = useState(false)
-    const [pageTitle, setPageTitle] = useState("")
+    useEffect(() => {
+        const tabFromQuery = searchParams.get("tab") as Tab
+        if (
+            tabFromQuery &&
+            ["profile", "settings", "orders", "wishlist"].includes(tabFromQuery)
+        ) {
+            setActiveTab(tabFromQuery)
+        } else {
+            setActiveTab("profile")
+            router.replace("/dashboard?tab=profile", { scroll: false })
+        }
+    }, [searchParams, router])
 
     useEffect(() => {
         if (!loading && !user) {
@@ -59,12 +65,11 @@ export default function Dashboard() {
     useEffect(() => {
         if (activeTab) {
             const title = `${tabTitles[activeTab]} | Your Account Dashboard`
-            document.title = title
             setPageTitle(title)
         }
     }, [activeTab])
 
-    const generateStructuredData = () => {
+    const generateStructuredData = (): object => {
         return {
             "@context": "https://schema.org",
             "@type": "BreadcrumbList",
@@ -91,14 +96,13 @@ export default function Dashboard() {
         }
     }
 
-    const handleTabSelect = (tab: Tab) => {
+    const handleTabSelect = (tab: Tab): void => {
         setActiveTab(tab)
         setIsSidebarOpen(false)
-
         router.replace(`/dashboard?tab=${tab}`, { scroll: false })
     }
 
-    const toggleSidebar = () => {
+    const toggleSidebar = (): void => {
         setIsSidebarOpen((prev) => !prev)
     }
 

@@ -6,62 +6,64 @@ import Link from "next/link"
 import { useState, useEffect } from "react"
 import { getProfile } from "@/lib/api"
 
+interface ProfileData {
+    name: string
+    email: string
+    createdAt: string
+    wishlistItems: number
+    orderedItems: number
+}
+
 export default function Profile() {
     const { user, token, loading } = useAuth()
-    const [profileData, setProfileData] = useState<{
-        name: string
-        email: string
-        createdAt: string
-        wishlistItems: number
-        orderedItems: number
-    } | null>(null)
+    const [profileData, setProfileData] = useState<ProfileData | null>(null)
     const [fetchError, setFetchError] = useState<string | null>(null)
 
     useEffect(() => {
-        if (token) {
-            const fetchProfile = async () => {
-                try {
-                    const apiResponse = await getProfile(token)
-                    console.log("Profile API Response:", apiResponse) // Log the response
-                    const formattedData = {
-                        name: apiResponse.name || "",
-                        email: apiResponse.email || "",
-                        createdAt: apiResponse.user?.createdAt || "",
-                        wishlistItems: apiResponse.wishlistItems || 0,
-                        orderedItems: apiResponse.orderedItems || 0,
-                    }
-                    setProfileData(formattedData)
-                    setFetchError(null)
-                } catch (err) {
-                    setFetchError("Failed to load profile data")
-                    console.error("Profile fetch error:", err)
+        if (!token) return
+
+        const fetchProfile = async () => {
+            try {
+                const response = await getProfile(token)
+                const formattedData: ProfileData = {
+                    name: response.name || "",
+                    email: response.email || "",
+                    createdAt: response.createdAt || "",
+                    wishlistItems: response.wishlistItems || 0,
+                    orderedItems: response.orderedItems || 0,
                 }
+                setProfileData(formattedData)
+                setFetchError(null)
+            } catch (err) {
+                console.error("Profile fetch error:", err)
+                setFetchError("Failed to load profile data")
             }
-            fetchProfile()
         }
+
+        fetchProfile()
     }, [token])
 
     if (loading) {
         return (
-            <div className='text-mutedSand text-center'>Loading profile...</div>
+            <div className='text-center text-mutedSand'>Loading profile...</div>
         )
     }
 
     if (!user || !token) {
         return (
-            <div className='text-mutedSand text-center'>
-                Unable to load profile. Please log in again.
+            <div className='text-center text-mutedSand'>
+                Please log in to view your profile.
             </div>
         )
     }
 
     if (fetchError) {
-        return <div className='text-mutedSand text-center'>{fetchError}</div>
+        return <div className='text-center text-mutedSand'>{fetchError}</div>
     }
 
     if (!profileData) {
         return (
-            <div className='text-mutedSand text-center'>
+            <div className='text-center text-mutedSand'>
                 Loading profile data...
             </div>
         )
@@ -76,66 +78,66 @@ export default function Profile() {
         : "Unknown"
 
     return (
-        <div className='w-full max-w-2xl mx-auto bg-deepGray p-4 sm:p-6 rounded-lg shadow-lg'>
-            <h2 className='text-lg sm:text-xl md:text-2xl font-bold mb-4 sm:mb-6 text-center text-warmBeige'>
+        <div className='mx-auto w-full max-w-2xl rounded-lg bg-deepGray p-6 shadow-lg'>
+            <h2 className='mb-6 text-center text-2xl font-bold text-warmBeige'>
                 Your Profile
             </h2>
-            <div className='flex flex-col sm:flex-row items-center sm:items-start gap-4 sm:gap-6 mb-4 sm:mb-6'>
-                <div className='flex-shrink-0'>
-                    <div className='w-16 h-16 sm:w-20 sm:h-20 bg-burntAmber rounded-full flex items-center justify-center text-darkMutedTeal text-2xl sm:text-3xl font-bold'>
-                        {profileData.name.charAt(0).toUpperCase()}
-                    </div>
+            <div className='mb-6 flex flex-col items-center gap-6 sm:flex-row sm:items-start'>
+                <div className='w-20 h-20 rounded-full bg-burntAmber flex items-center justify-center text-3xl font-bold text-darkMutedTeal'>
+                    {profileData.name.charAt(0).toUpperCase()}
                 </div>
                 <div className='flex-1 text-center sm:text-left'>
-                    <h3 className='text-base sm:text-lg md:text-xl font-semibold text-warmBeige mb-2'>
+                    <h3 className='mb-2 text-xl font-semibold text-warmBeige'>
                         {profileData.name}
                     </h3>
-                    <p className='text-sm sm:text-base text-mutedSand mb-1'>
-                        <span className='font-bold text-warmBeige'>Email:</span>{" "}
+                    <p className='mb-1 text-base text-mutedSand'>
+                        <span className='font-bold text-warmBeige'>
+                            Email:{" "}
+                        </span>
                         {profileData.email}
                     </p>
-                    <p className='text-sm sm:text-base text-mutedSand'>
+                    <p className='text-base text-mutedSand'>
                         <span className='font-bold text-warmBeige'>
-                            Member Since:
-                        </span>{" "}
+                            Member Since:{" "}
+                        </span>
                         {joinedDate}
                     </p>
                 </div>
-                <Link href='/dashboard'>
-                    <button className='bg-burntAmber text-darkMutedTeal px-3 py-1 sm:px-4 sm:py-2 rounded-lg font-generalSans font-semibold flex items-center gap-2 hover:bg-deepCopper transition-colors text-sm sm:text-base'>
-                        <Edit
-                            size={16}
-                            className='sm:w-5 sm:h-5'
-                        />
+                <Link href='/dashboard?tab=settings'>
+                    <button className='flex items-center gap-2 rounded-lg bg-burntAmber px-4 py-2 font-semibold text-darkMutedTeal transition-colors hover:bg-deepCopper'>
+                        <Edit size={20} />
                         Edit Profile
                     </button>
                 </Link>
             </div>
-            <div className='grid grid-cols-1 sm:grid-cols-2 gap-3 sm:gap-4'>
-                <div className='bg-slightlyLightGrey p-3 sm:p-4 rounded-lg flex items-center gap-2 sm:gap-3'>
+            <div className='grid grid-cols-1 gap-4 sm:grid-cols-2'>
+                <div className='flex items-center gap-3 rounded-lg bg-slightlyLightGrey p-4'>
                     <ShoppingBag
                         size={20}
                         className='text-burntAmber'
                     />
                     <div>
-                        <p className='text-warmBeige font-semibold text-sm sm:text-base'>
+                        <p className='font-semibold text-warmBeige'>
                             Items Ordered
                         </p>
-                        <p className='text-mutedSand text-sm sm:text-base'>
+                        <p className='text-mutedSand'>
                             {profileData.orderedItems}
                         </p>
                     </div>
                 </div>
-                <div className='bg-slightlyLightGrey p-3 sm:p-4 rounded-lg flex items-center gap-2 sm:gap-3'>
+                <div
+                    className='flex items-center gap-3 rounded-lg bg-slightlyLightGrey p-4
+
+'>
                     <Heart
                         size={20}
                         className='text-burntAmber'
                     />
                     <div>
-                        <p className='text-warmBeige font-semibold text-sm sm:text-base'>
+                        <p className='font-semibold text-warmBeige'>
                             Items Wishlisted
                         </p>
-                        <p className='text-mutedSand text-sm sm:text-base'>
+                        <p className='text-mutedSand'>
                             {profileData.wishlistItems}{" "}
                             <Link
                                 href='/dashboard?tab=wishlist'

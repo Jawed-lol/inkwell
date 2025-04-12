@@ -1,10 +1,11 @@
+// routes/books.js
 const express = require('express');
 const router = express.Router();
 const Joi = require('joi');
 const mongoose = require('mongoose');
 const { Book, Author } = require('../models/Books');
 
-// Joi Validation Schemas (unchanged)
+// Joi Validation Schemas
 const bookSchema = Joi.object({
   title: Joi.string().required(),
   author: Joi.alternatives()
@@ -34,7 +35,46 @@ const reviewSchema = Joi.object({
   comment: Joi.string().optional(),
 });
 
-// GET 4 random books (moved to top to avoid conflict with /:id)
+// GET search books
+router.get('/search', async (req, res) => {
+  try {
+    const { q } = req.query;
+    if (!q) {
+      return res.status(400).json({ success: false, message: 'Query parameter is required' });
+    }
+
+    // Find authors matching the query
+    const authors = await Author.find({
+      name: { $regex: q, $options: 'i' },
+    }).lean();
+
+    const authorIds = authors.map((author) => author._id);
+
+    // Search books by title, genre, or author
+    const books = await Book.find({
+      $or: [
+        { title: { $regex: q, $options: 'i' } },
+        { genre: { $regex: q, $options: 'i' } },
+        { author: { $in: authorIds } },
+      ],
+    })
+      .populate('author', 'name about')
+      .lean();
+
+    const formattedBooks = books.map((book) => ({
+      ...book,
+      author: book.author.name,
+      author_bio: book.author.about || '',
+    }));
+
+    res.status(200).json({ success: true, data: formattedBooks });
+  } catch (error) {
+    console.error('Search books error:', error.message);
+    res.status(500).json({ success: false, error: 'Server error' });
+  }
+});
+
+// GET 4 random books
 router.get('/random', async (req, res) => {
   try {
     const randomBooks = await Book.aggregate([
@@ -104,7 +144,7 @@ router.get('/', async (req, res) => {
   }
 });
 
-// GET a single book by ID (with ObjectId validation)
+// GET a single book by ID
 router.get('/:id', async (req, res) => {
   if (!mongoose.Types.ObjectId.isValid(req.params.id)) {
     return res.status(400).json({ success: false, message: 'Invalid book ID' });

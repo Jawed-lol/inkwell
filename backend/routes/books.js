@@ -1,4 +1,3 @@
-// routes/books.js
 const express = require('express');
 const router = express.Router();
 const Joi = require('joi');
@@ -8,18 +7,16 @@ const { Book, Author } = require('../models/Books');
 // Joi Validation Schemas
 const bookSchema = Joi.object({
   title: Joi.string().required(),
-  author: Joi.alternatives()
-    .try(
-      Joi.string().hex().length(24),
-      Joi.object({
-        name: Joi.string().required(),
-        about: Joi.string().required(),
-      })
-    )
-    .required(),
+  author: Joi.alternatives().try(
+    Joi.string().hex().length(24), // Author ID for existing authors
+    Joi.object({
+      name: Joi.string().required(),
+      about: Joi.string().required(),
+    })
+  ).required(),
   description: Joi.string().required(),
   genre: Joi.string().required(),
-  page_count: Joi.number().integer().min(1).required(),
+  pages_number: Joi.number().integer().min(1).required(), // Use pages_number to match Mongoose schema
   publication_year: Joi.number().integer().min(1000).max(new Date().getFullYear()).required(),
   price: Joi.number().min(0).required(),
   urlPath: Joi.string().required(),
@@ -27,6 +24,7 @@ const bookSchema = Joi.object({
   language: Joi.string().required(),
   publisher: Joi.string().required(),
   synopsis: Joi.string().required(),
+  slug: Joi.string().optional(), // Slug is generated server-side
 });
 
 const reviewSchema = Joi.object({
@@ -61,6 +59,7 @@ router.get('/search', async (req, res) => {
       ...book,
       author: book.author.name,
       author_bio: book.author.about || '',
+      slug: book.slug,
     }));
 
     res.status(200).json({ success: true, data: formattedBooks });
@@ -86,7 +85,7 @@ router.get('/random', async (req, res) => {
       { $unwind: '$author' },
       {
         $project: {
-          _id: { $toString: '$_id' },
+          slug: 1, // Use slug instead of _id
           title: 1,
           author: '$author.name',
           rating: {
@@ -121,10 +120,11 @@ router.get('/', async (req, res) => {
       .populate('author', 'name about')
       .lean();
 
-    const formattedBooks = books.map(book => ({
+    const formattedBooks = books.map((book) => ({
       ...book,
       author: book.author.name,
-      author_bio: book.author.about,
+      author_bio: book.author.about || '',
+      slug: book.slug,
     }));
 
     const totalBooks = await Book.countDocuments();
@@ -140,13 +140,10 @@ router.get('/', async (req, res) => {
   }
 });
 
-// GET a single book by ID
-router.get('/:id', async (req, res) => {
-  if (!mongoose.Types.ObjectId.isValid(req.params.id)) {
-    return res.status(400).json({ success: false, message: 'Invalid book ID' });
-  }
+// GET a single book by slug
+router.get('/:slug', async (req, res) => {
   try {
-    const book = await Book.findById(req.params.id)
+    const book = await Book.findOne({ slug: req.params.slug })
       .populate('author', 'name about')
       .lean();
     if (!book) {
@@ -155,7 +152,8 @@ router.get('/:id', async (req, res) => {
     const formattedBook = {
       ...book,
       author: book.author.name,
-      author_bio: book.author.about,
+      author_bio: book.author.about || '',
+      slug: book.slug,
     };
     res.status(200).json({ success: true, data: formattedBook });
   } catch (error) {
@@ -195,22 +193,22 @@ router.post('/', async (req, res) => {
       author: authorId,
     });
     await newBook.save();
-    res.status(201).json({ success: true, data: newBook });
+    res.status(201).json({ success: true, data: { ...newBook.toObject(), slug: newBook.slug } });
   } catch (error) {
     console.error('Book creation error:', error.message);
     res.status(500).json({ success: false, error: error.message });
   }
 });
 
-// POST a review for a book
-router.post('/:id/reviews', async (req, res) => {
+// POST a review for a book by slug
+router.post('/:slug/reviews', async (req, res) => {
   try {
     const { error } = reviewSchema.validate(req.body);
     if (error) {
       return res.status(400).json({ success: false, message: error.details[0].message });
     }
 
-    const book = await Book.findById(req.params.id);
+    const book = await Book.findOne({ slug: req.params.slug });
     if (!book) {
       return res.status(404).json({ success: false, message: 'Book not found' });
     }
@@ -221,11 +219,12 @@ router.post('/:id/reviews', async (req, res) => {
     });
     book.reviews_number += 1;
     await book.save();
-    res.status(201).json({ success: true, data: book });
+    res.status(201).json({ success: true, data: { ...book.toObject(), slug: book.slug } });
   } catch (error) {
     console.error('Review creation error:', error.message);
     res.status(500).json({ success: false, error: error.message });
   }
 });
+
 
 module.exports = router;

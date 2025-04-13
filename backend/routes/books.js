@@ -24,7 +24,7 @@ const bookSchema = Joi.object({
   language: Joi.string().required(),
   publisher: Joi.string().required(),
   synopsis: Joi.string().required(),
-  slug: Joi.string().optional(), // Slug is generated server-side
+  slug: Joi.string().optional(),
 });
 
 const reviewSchema = Joi.object({
@@ -85,7 +85,7 @@ router.get('/random', async (req, res) => {
       { $unwind: '$author' },
       {
         $project: {
-          slug: 1, // Use slug instead of _id
+          slug: 1, 
           title: 1,
           author: '$author.name',
           rating: {

@@ -1,12 +1,12 @@
 const express = require('express');
 const router = express.Router();
 const User = require('../models/User');
-const { Book } = require('../models/Books'); // Import Book model
+const { Book } = require('../models/Books');
 const authMiddleware = require('../middleware/auth');
 
 router.get('/', authMiddleware, async (req, res) => {
   try {
-    console.log('GET /api/cart hit for user:', req.user.id);
+    console.log('GET /cart hit for user:', req.user.id);
     const user = await User.findById(req.user.id);
     if (!user) {
       console.log('User not found for ID:', req.user.id);
@@ -14,7 +14,7 @@ router.get('/', authMiddleware, async (req, res) => {
     }
     const cartItems = await Promise.all(
       user.cart.map(async (item) => {
-        const book = await Book.findOne({ slug: item.slug }); // Query by slug
+        const book = await Book.findOne({ slug: item.slug });
         if (!book) {
           console.log('Book not found for slug:', item.slug);
           return null;
@@ -29,7 +29,6 @@ router.get('/', authMiddleware, async (req, res) => {
         };
       })
     );
-    // Filter out null items (books not found)
     const validCartItems = cartItems.filter((item) => item !== null);
     res.json({ items: validCartItems });
   } catch (error) {
@@ -41,7 +40,7 @@ router.get('/', authMiddleware, async (req, res) => {
 router.put('/', authMiddleware, async (req, res) => {
   const { items } = req.body;
   try {
-    console.log('PUT /api/cart hit with items:', JSON.stringify(items, null, 2));
+    console.log('PUT /cart hit with items:', JSON.stringify(items, null, 2));
     if (!Array.isArray(items)) {
       console.log('Invalid items format:', items);
       return res.status(400).json({ message: 'Items must be an array' });
@@ -51,7 +50,6 @@ router.put('/', authMiddleware, async (req, res) => {
       console.log('User not found for ID:', req.user.id);
       return res.status(404).json({ message: 'User not found' });
     }
-    // Validate items
     const validatedItems = await Promise.all(
       items.map(async (item) => {
         if (!item.slug || typeof item.quantity !== 'number') {

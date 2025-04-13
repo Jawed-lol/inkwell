@@ -48,7 +48,7 @@ interface CartApiError {
     message: string
 }
 
-const API_URL = process.env.NEXT_PUBLIC_API_URL + "/cart" // Adjusted to /cart
+const API_URL = process.env.NEXT_PUBLIC_API_URL + "/api/cart"
 const CART_STORAGE_KEY = "cart"
 const DEBOUNCE_DELAY = 500
 

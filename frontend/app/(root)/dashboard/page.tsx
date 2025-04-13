@@ -1,6 +1,6 @@
 "use client"
 
-import { useState, useEffect } from "react"
+import { useState, useEffect, Suspense } from "react"
 import { useRouter, useSearchParams } from "next/navigation"
 import Head from "next/head"
 import Sidebar from "@/components/userDashboard/Sidebar"
@@ -28,7 +28,8 @@ const tabDescriptions: Record<Tab, string> = {
         "Browse your saved items and add them to cart when ready to purchase.",
 }
 
-export default function Dashboard() {
+// Separate component to handle useSearchParams
+function DashboardContent() {
     const router = useRouter()
     const searchParams = useSearchParams()
     const { user, loading } = useAuth()
@@ -196,5 +197,18 @@ export default function Dashboard() {
                 </main>
             </div>
         </>
+    )
+}
+
+export default function Dashboard() {
+    return (
+        <Suspense
+            fallback={
+                <div className='pt-[120px] flex justify-center items-center min-h-screen'>
+                    <p>Loading...</p>
+                </div>
+            }>
+            <DashboardContent />
+        </Suspense>
     )
 }

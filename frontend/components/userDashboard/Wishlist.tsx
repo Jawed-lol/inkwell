@@ -7,6 +7,7 @@ import { Trash2, ShoppingCart } from "lucide-react"
 import Image from "next/image"
 import Head from "next/head"
 import { motion } from "framer-motion"
+import Link from "next/link"
 
 interface Book {
     _id: string
@@ -171,11 +172,11 @@ export default function Wishlist() {
                 {wishlist.length === 0 ? (
                     <p className='text-mutedSand text-center py-10'>
                         Your wishlist is empty.{" "}
-                        <a
-                            href='/books'
+                        <Link
+                            href='/shop'
                             className='text-burntAmber underline'>
                             Browse books
-                        </a>{" "}
+                        </Link>{" "}
                         to add some!
                     </p>
                 ) : (

@@ -1,17 +1,18 @@
 import { Suspense } from "react"
-import SearchResults from "./SearchResult"
+import SearchResults from "./SearchResults"
 
-export default function SearchPage({
-    searchParams,
-}: {
-    searchParams: { q?: string }
-}) {
+interface SearchPageProps {
+    searchParams: { [key: string]: string | string[] | undefined }
+}
+
+export default function SearchPage({ searchParams }: SearchPageProps) {
+    const query = searchParams.q || ""
     return (
         <Suspense
             fallback={
                 <div className='text-warmBeige'>Loading search results...</div>
             }>
-            <SearchResults query={searchParams.q || ""} />
+            <SearchResults query={typeof query === "string" ? query : ""} />
         </Suspense>
     )
 }

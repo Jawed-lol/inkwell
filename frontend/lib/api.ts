@@ -2,6 +2,14 @@ const BASE_URL = process.env.NEXT_PUBLIC_API_URL || "http://localhost:3000"
 
 import axios from "axios"
 
+interface Review {
+    _id?: string
+    user_id: string
+    rating: number
+    comment?: string
+    created_at: string
+}
+
 interface Book {
     _id: string
     title: string
@@ -10,15 +18,13 @@ interface Book {
     genre: string
     description: string
     urlPath: string
-    category: string
-    isbn: string
-    publication_year: number
-    publisher: string
     pages_number: number
-    inStock?: boolean
-    rating?: number
-    language: string
-    format?: string
+    publication_year: number
+    publisher?: string
+    language?: string
+    isbn?: string
+    author_bio?: string
+    reviews?: Review[]
     reviews_number?: number
 }
 
@@ -43,6 +49,14 @@ interface AuthResponse {
 }
 
 interface BooksResponse {
+    success: boolean
+    message?: string
+    data: Book[]
+    totalPages: number
+    currentPage: number
+}
+
+interface SearchBooksResponse {
     success: boolean
     message?: string
     data: Book[]
@@ -207,6 +221,33 @@ export const fetchBookById = async (id: string): Promise<BookResponse> => {
         return response.data
     } catch (error) {
         return handleAxiosError(error, "Failed to fetch book")
+    }
+}
+
+export const fetchBooksBySearch = async (
+    query: string
+): Promise<SearchBooksResponse> => {
+    try {
+        const response = await axios.get<SearchBooksResponse>(
+            `${BASE_URL}/api/books/search`,
+            {
+                params: { q: query },
+            }
+        )
+        if (!response.data.success) {
+            throw new Error(
+                response.data.message || "Failed to fetch search results"
+            )
+        }
+        return response.data
+    } catch (error) {
+        console.error("Error fetching search results:", error)
+        if (axios.isAxiosError(error) && error.response) {
+            throw new Error(
+                error.response.data.message || "Failed to fetch search results"
+            )
+        }
+        throw error
     }
 }
 

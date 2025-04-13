@@ -72,3 +72,12 @@ body {
         background-image: linear-gradient(tobottom, #1b1b1b, #252525);
     }
 }
+
+.hide-scrollbar {
+    scrollbar-width: none;
+    -ms-overflow-style: none;
+}
+
+.hide-scrollbar::-webkit-scrollbar {
+    display: none;
+}

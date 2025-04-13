@@ -42,15 +42,11 @@ router.get('/search', async (req, res) => {
     if (!q) {
       return res.status(400).json({ success: false, message: 'Query parameter is required' });
     }
-
-    // Find authors matching the query
     const authors = await Author.find({
       name: { $regex: q, $options: 'i' },
     }).lean();
 
     const authorIds = authors.map((author) => author._id);
-
-    // Search books by title, genre, or author
     const books = await Book.find({
       $or: [
         { title: { $regex: q, $options: 'i' } },

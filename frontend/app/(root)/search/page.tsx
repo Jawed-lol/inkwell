@@ -1,15 +1,14 @@
 // app/(root)/search/page.tsx
 import { Suspense } from "react"
 import SearchResults from "./SearchResults"
-import type { NextPage } from "next"
 
-// Define props using NextPage to align with Next.js's PageProps
-type SearchPageProps = NextPage<{
+// Define props with searchParams as a Promise
+interface SearchPageProps {
     searchParams: Promise<{ [key: string]: string | string[] | undefined }>
-}>
+}
 
 // Use async to resolve searchParams Promise
-const SearchPage: NextPage<SearchPageProps> = async ({ searchParams }) => {
+export default async function SearchPage({ searchParams }: SearchPageProps) {
     // Resolve the searchParams Promise
     const resolvedSearchParams = await searchParams
     const query =
@@ -26,5 +25,3 @@ const SearchPage: NextPage<SearchPageProps> = async ({ searchParams }) => {
         </Suspense>
     )
 }
-
-export default SearchPage

@@ -1,3 +1,4 @@
+// app/(root)/search/SearchResults.tsx
 "use client"
 
 import { useState, useEffect } from "react"

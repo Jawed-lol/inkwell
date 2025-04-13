@@ -3,12 +3,13 @@ const router = express.Router();
 const Joi = require('joi');
 const mongoose = require('mongoose');
 const { Book, Author } = require('../models/Books');
+const slugify = require('slugify');
 
 // Joi Validation Schemas
 const bookSchema = Joi.object({
   title: Joi.string().required(),
   author: Joi.alternatives().try(
-    Joi.string().hex().length(24), // Author ID for existing authors
+    Joi.string().hex().length(24), // Author ID
     Joi.object({
       name: Joi.string().required(),
       about: Joi.string().required(),
@@ -16,7 +17,7 @@ const bookSchema = Joi.object({
   ).required(),
   description: Joi.string().required(),
   genre: Joi.string().required(),
-  pages_number: Joi.number().integer().min(1).required(), // Use pages_number to match Mongoose schema
+  pages_number: Joi.number().integer().min(1).required(),
   publication_year: Joi.number().integer().min(1000).max(new Date().getFullYear()).required(),
   price: Joi.number().min(0).required(),
   urlPath: Joi.string().required(),
@@ -28,7 +29,7 @@ const bookSchema = Joi.object({
 });
 
 const reviewSchema = Joi.object({
-  user_id: Joi.string().required(),
+  user_id: Joi.string().hex().length(24).required(), // Validate as ObjectId
   rating: Joi.number().integer().min(1).max(5).required(),
   comment: Joi.string().optional(),
 });
@@ -40,10 +41,7 @@ router.get('/search', async (req, res) => {
     if (!q) {
       return res.status(400).json({ success: false, message: 'Query parameter is required' });
     }
-    const authors = await Author.find({
-      name: { $regex: q, $options: 'i' },
-    }).lean();
-
+    const authors = await Author.find({ name: { $regex: q, $options: 'i' } }).lean();
     const authorIds = authors.map((author) => author._id);
     const books = await Book.find({
       $or: [
@@ -60,12 +58,13 @@ router.get('/search', async (req, res) => {
       author: book.author.name,
       author_bio: book.author.about || '',
       slug: book.slug,
+      rating: book.reviews.length > 0 ? Math.round(book.reviews.reduce((sum, r) => sum + r.rating, 0) / book.reviews.length * 10) / 10 : 0,
     }));
 
     res.status(200).json({ success: true, data: formattedBooks });
   } catch (error) {
-    console.error('Search books error:', error.message);
-    res.status(500).json({ success: false, error: 'Server error' });
+    console.error('Search books error:', error.message, error.stack);
+    res.status(500).json({ success: false, message: 'Failed to search books' });
   }
 });
 
@@ -85,7 +84,7 @@ router.get('/random', async (req, res) => {
       { $unwind: '$author' },
       {
         $project: {
-          slug: 1, 
+          slug: 1,
           title: 1,
           author: '$author.name',
           rating: {
@@ -102,8 +101,8 @@ router.get('/random', async (req, res) => {
     ]);
     res.json(randomBooks);
   } catch (error) {
-    console.error('Error fetching random books:', error);
-    res.status(500).json({ message: 'Server error' });
+    console.error('Random books error:', error.message, error.stack);
+    res.status(500).json({ message: 'Failed to fetch random books' });
   }
 });
 
@@ -125,6 +124,7 @@ router.get('/', async (req, res) => {
       author: book.author.name,
       author_bio: book.author.about || '',
       slug: book.slug,
+      rating: book.reviews.length > 0 ? Math.round(book.reviews.reduce((sum, r) => sum + r.rating, 0) / book.reviews.length * 10) / 10 : 0,
     }));
 
     const totalBooks = await Book.countDocuments();
@@ -135,8 +135,8 @@ router.get('/', async (req, res) => {
       currentPage: page,
     });
   } catch (error) {
-    console.error('Books fetch error:', error.message);
-    res.status(500).json({ success: false, error: error.message });
+    console.error('Books fetch error:', error.message, error.stack);
+    res.status(500).json({ success: false, message: 'Failed to fetch books' });
   }
 });
 
@@ -154,11 +154,12 @@ router.get('/:slug', async (req, res) => {
       author: book.author.name,
       author_bio: book.author.about || '',
       slug: book.slug,
+      rating: book.reviews.length > 0 ? Math.round(book.reviews.reduce((sum, r) => sum + r.rating, 0) / book.reviews.length * 10) / 10 : 0,
     };
     res.status(200).json({ success: true, data: formattedBook });
   } catch (error) {
-    console.error('Book fetch error:', error.message);
-    res.status(500).json({ success: false, error: error.message });
+    console.error('Book fetch error:', error.message, error.stack);
+    res.status(500).json({ success: false, message: 'Failed to fetch book' });
   }
 });
 
@@ -174,29 +175,48 @@ router.post('/', async (req, res) => {
     const authorData = req.body.author;
 
     if (typeof authorData === 'string') {
+      if (!mongoose.Types.ObjectId.isValid(authorData)) {
+        return res.status(400).json({ success: false, message: 'Invalid author ID' });
+      }
       const existingAuthor = await Author.findById(authorData);
       if (!existingAuthor) {
         return res.status(400).json({ success: false, message: 'Author not found' });
       }
       authorId = authorData;
     } else {
-      const newAuthor = new Author({
-        name: authorData.name,
-        about: authorData.about,
-      });
-      await newAuthor.save();
-      authorId = newAuthor._id;
+      const existingAuthor = await Author.findOne({ name: authorData.name });
+      if (existingAuthor) {
+        authorId = existingAuthor._id;
+      } else {
+        const newAuthor = new Author({
+          name: authorData.name,
+          about: authorData.about,
+        });
+        await newAuthor.save();
+        authorId = newAuthor._id;
+      }
+    }
+
+    const slug = req.body.slug || slugify(req.body.title, { lower: true }) + '-' + Math.random().toString(36).slice(-4);
+    const existingBook = await Book.findOne({ slug });
+    if (existingBook) {
+      return res.status(400).json({ success: false, message: 'Slug already exists' });
     }
 
     const newBook = new Book({
       ...req.body,
       author: authorId,
+      slug,
     });
     await newBook.save();
-    res.status(201).json({ success: true, data: { ...newBook.toObject(), slug: newBook.slug } });
+    const populatedBook = await Book.findById(newBook._id).populate('author', 'name about').lean();
+    res.status(201).json({
+      success: true,
+      data: { ...populatedBook, author: populatedBook.author.name, author_bio: populatedBook.author.about || '' },
+    });
   } catch (error) {
-    console.error('Book creation error:', error.message);
-    res.status(500).json({ success: false, error: error.message });
+    console.error('Book creation error:', error.message, error.stack);
+    res.status(500).json({ success: false, message: 'Failed to create book' });
   }
 });
 
@@ -208,9 +228,18 @@ router.post('/:slug/reviews', async (req, res) => {
       return res.status(400).json({ success: false, message: error.details[0].message });
     }
 
+    if (!mongoose.Types.ObjectId.isValid(req.body.user_id)) {
+      return res.status(400).json({ success: false, message: 'Invalid user ID' });
+    }
+
     const book = await Book.findOne({ slug: req.params.slug });
     if (!book) {
       return res.status(404).json({ success: false, message: 'Book not found' });
+    }
+
+    const existingReview = book.reviews.find((r) => r.user_id.toString() === req.body.user_id);
+    if (existingReview) {
+      return res.status(400).json({ success: false, message: 'User has already reviewed this book' });
     }
 
     book.reviews.push({
@@ -219,12 +248,20 @@ router.post('/:slug/reviews', async (req, res) => {
     });
     book.reviews_number += 1;
     await book.save();
-    res.status(201).json({ success: true, data: { ...book.toObject(), slug: book.slug } });
+    const populatedBook = await Book.findById(book._id).populate('author', 'name about').lean();
+    res.status(201).json({
+      success: true,
+      data: {
+        ...populatedBook,
+        author: populatedBook.author.name,
+        author_bio: populatedBook.author.about || '',
+        slug: book.slug,
+      },
+    });
   } catch (error) {
-    console.error('Review creation error:', error.message);
-    res.status(500).json({ success: false, error: error.message });
+    console.error('Review creation error:', error.message, error.stack);
+    res.status(500).json({ success: false, message: 'Failed to create review' });
   }
 });
-
 
 module.exports = router;

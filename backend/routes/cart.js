@@ -3,96 +3,94 @@ const router = express.Router();
 const User = require('../models/User');
 const { Book } = require('../models/Books');
 const authMiddleware = require('../middleware/auth');
+const { body, validationResult } = require('express-validator');
+
+// Helper function to transform cart items
+const transformCartItems = async (cartItems) => {
+  const bookSlugs = cartItems.map((item) => item.slug);
+  const books = await Book.find({ slug: { $in: bookSlugs } }).populate('author', 'name');
+  const bookMap = new Map(books.map((book) => [book.slug, book]));
+
+  return cartItems
+    .map((item) => {
+      const book = bookMap.get(item.slug);
+      if (!book) {
+        console.warn('Book not found for slug:', item.slug);
+        return null;
+      }
+      return {
+        slug: book.slug,
+        title: book.title || 'Unknown Title',
+        price: book.price || 0,
+        urlPath: book.urlPath || '/placeholder.svg',
+        author: book.author.name || 'Unknown Author',
+        quantity: item.quantity,
+      };
+    })
+    .filter((item) => item !== null);
+};
 
 router.get('/', authMiddleware, async (req, res) => {
   try {
-    console.log('GET /cart hit for user:', req.user.id);
     const user = await User.findById(req.user.id);
     if (!user) {
-      console.log('User not found for ID:', req.user.id);
       return res.status(404).json({ message: 'User not found' });
     }
-    const cartItems = await Promise.all(
-      user.cart.map(async (item) => {
-        const book = await Book.findOne({ slug: item.slug });
-        if (!book) {
-          console.log('Book not found for slug:', item.slug);
-          return null;
-        }
-        return {
-          slug: book.slug,
-          title: book.title || 'Unknown Title',
-          price: book.price || 0,
-          urlPath: book.urlPath || '/placeholder.svg',
-          author: book.author || 'Unknown Author',
-          quantity: item.quantity,
-        };
-      })
-    );
-    const validCartItems = cartItems.filter((item) => item !== null);
+
+    const validCartItems = await transformCartItems(user.cart);
     res.json({ items: validCartItems });
   } catch (error) {
     console.error('Get cart error:', error.message, error.stack);
-    res.status(500).json({ message: 'Server error', error: error.message });
+    res.status(500).json({ message: 'Failed to retrieve cart' });
   }
 });
 
-router.put('/', authMiddleware, async (req, res) => {
-  const { items } = req.body;
-  try {
-    console.log('PUT /cart hit with items:', JSON.stringify(items, null, 2));
-    if (!Array.isArray(items)) {
-      console.log('Invalid items format:', items);
-      return res.status(400).json({ message: 'Items must be an array' });
+router.put(
+  '/',
+  authMiddleware,
+  [
+    body('items').isArray().withMessage('Items must be an array'),
+    body('items.*.slug').notEmpty().withMessage('Each item must have a slug'),
+    body('items.*.quantity').isInt({ min: 0 }).withMessage('Each item must have a non-negative quantity'),
+  ],
+  async (req, res) => {
+    const errors = validationResult(req);
+    if (!errors.isEmpty()) {
+      return res.status(400).json({ message: errors.array()[0].msg });
     }
-    const user = await User.findById(req.user.id);
-    if (!user) {
-      console.log('User not found for ID:', req.user.id);
-      return res.status(404).json({ message: 'User not found' });
+
+    try {
+      const { items } = req.body;
+      const user = await User.findById(req.user.id);
+      if (!user) {
+        return res.status(404).json({ message: 'User not found' });
+      }
+
+      const validatedItems = await Promise.all(
+        items.map(async (item) => {
+          const book = await Book.findOne({ slug: item.slug });
+          if (!book) {
+            throw new Error(`Book with slug ${item.slug} not found`);
+          }
+          return {
+            slug: item.slug,
+            quantity: item.quantity,
+          };
+        })
+      );
+
+      user.cart = validatedItems;
+      await user.save();
+
+      const validCartItems = await transformCartItems(validatedItems);
+      res.json({ items: validCartItems });
+    } catch (error) {
+      console.error('Update cart error:', error.message, error.stack);
+      res.status(error.message.includes('not found') ? 400 : 400).json({
+        message: error.message || 'Failed to update cart',
+      });
     }
-    const validatedItems = await Promise.all(
-      items.map(async (item) => {
-        if (!item.slug || typeof item.quantity !== 'number') {
-          console.log('Invalid item format:', item);
-          throw new Error('Each item must have a valid slug and numeric quantity');
-        }
-        const book = await Book.findOne({ slug: item.slug });
-        if (!book) {
-          console.log('Book not found for slug:', item.slug);
-          throw new Error(`Book with slug ${item.slug} not found`);
-        }
-        return {
-          slug: item.slug,
-          quantity: item.quantity,
-        };
-      })
-    );
-    user.cart = validatedItems;
-    await user.save();
-    console.log('Cart saved successfully for user:', req.user.id);
-    const cartItems = await Promise.all(
-      validatedItems.map(async (item) => {
-        const book = await Book.findOne({ slug: item.slug });
-        if (!book) {
-          console.log('Book not found for slug:', item.slug);
-          return null;
-        }
-        return {
-          slug: book.slug,
-          title: book.title || 'Unknown Title',
-          price: book.price || 0,
-          urlPath: book.urlPath || '/placeholder.svg',
-          author: book.author || 'Unknown Author',
-          quantity: item.quantity,
-        };
-      })
-    );
-    const validCartItems = cartItems.filter((item) => item !== null);
-    res.json({ items: validCartItems });
-  } catch (error) {
-    console.error('Update cart error:', error.message, error.stack);
-    res.status(400).json({ message: error.message || 'Server error' });
   }
-});
+);
 
 module.exports = router;

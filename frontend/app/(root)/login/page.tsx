@@ -1,4 +1,4 @@
-"use client"
+"use client" // Add this at the top to mark it as a Client Component
 
 import Image from "next/image"
 import Link from "next/link"
@@ -12,8 +12,14 @@ export default function Login() {
     const [formData, setFormData] = useState({ email: "", password: "" })
     const [error, setError] = useState<string | null>(null)
     const [showPassword, setShowPassword] = useState(false)
-    const { login } = useAuth()
+    const { login, user } = useAuth()
     const router = useRouter()
+
+    useEffect(() => {
+        if (user) {
+            router.push("/dashboard?tab=profile")
+        }
+    }, [user, router])
 
     useEffect(() => {
         document.title = "Login | Your Account | Bookstore Name"
@@ -39,7 +45,6 @@ export default function Login() {
             }
 
             login(data.token)
-
             router.push("/dashboard")
         } catch (err) {
             setError(
@@ -59,6 +64,10 @@ export default function Login() {
             "https://twitter.com/yourbookstore",
             "https://instagram.com/yourbookstore",
         ],
+    }
+
+    if (user) {
+        return null
     }
 
     return (
@@ -244,7 +253,7 @@ export default function Login() {
                             className={
                                 "font-generalSans text-[10px] text-mutedSand text-center md:text-[12px] lg:text-[14px]"
                             }>
-                            Don‘t have an account?
+                            Don‘t have an account?{" "}
                             <Link
                                 href='/register'
                                 className='text-burntAmber hover:text-deepCopper'>

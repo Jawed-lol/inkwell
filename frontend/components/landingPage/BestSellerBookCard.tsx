@@ -7,7 +7,7 @@ import { useRouter } from "next/navigation"
 import { useCart } from "@/context/CartContext"
 
 type BookProps = {
-    _id: string
+    slug: string
     title: string
     author: string
     rating: number
@@ -17,10 +17,22 @@ type BookProps = {
     genre: string
     pages_number: number
     publication_year: number
+    publisher: string
+    synopsis: string
+    language: string
+    isbn: string
+    reviews_number: number
+    reviews: {
+        id: string
+        content: string
+        rating: number
+        user_id: string
+        created_at: string
+    }[]
 }
 
 const BestSellerBookCard = ({
-    _id,
+    slug,
     title,
     author,
     rating,
@@ -30,18 +42,24 @@ const BestSellerBookCard = ({
     genre,
     pages_number,
     publication_year,
+    synopsis,
+    publisher,
+    language,
+    isbn,
+    reviews_number,
+    reviews,
 }: BookProps) => {
     const router = useRouter()
     const { addToCart } = useCart()
 
     const handleCardClick = () => {
-        router.push(`/book/${_id}`)
+        router.push(`/book/${slug}`)
     }
 
     const handleAddToCart = (e: React.MouseEvent) => {
         e.stopPropagation()
         const book = {
-            _id,
+            slug,
             title,
             author,
             rating,
@@ -51,6 +69,12 @@ const BestSellerBookCard = ({
             genre,
             pages_number,
             publication_year,
+            synopsis,
+            publisher,
+            language,
+            isbn,
+            reviews_number,
+            reviews,
         }
         addToCart(book)
     }

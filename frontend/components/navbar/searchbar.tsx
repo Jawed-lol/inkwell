@@ -9,7 +9,7 @@ import { fetchBooksBySearch } from "@/lib/api"
 import { motion, AnimatePresence, easeInOut } from "framer-motion"
 
 interface Book {
-    _id: string
+    slug: string
     title: string
     author: string
     price: number
@@ -32,7 +32,7 @@ export default function Searchbar() {
             const { data } = await fetchBooksBySearch(debouncedQuery)
             setSuggestions(
                 data.map((item: Book) => ({
-                    _id: item._id,
+                    slug: item.slug,
                     title: item.title,
                     author: item.author,
                     price: item.price,
@@ -63,7 +63,7 @@ export default function Searchbar() {
         (book: Book) => {
             setQuery("")
             setIsFocused(false)
-            router.push(`/book/${book._id}`)
+            router.push(`/book/${book.slug}`)
         },
         [router]
     )
@@ -215,7 +215,7 @@ export default function Searchbar() {
                         exit='exit'>
                         {displayedSuggestions.map((book) => (
                             <motion.li
-                                key={book._id}
+                                key={book.slug}
                                 onMouseDown={() => handleSuggestionClick(book)}
                                 className='flex cursor-pointer rounded-lg items-center px-3 py-2 text-warmBeige hover:bg-burntAmber hover:text-darkMutedTeal sm:px-4 sm:py-3'
                                 role='option'

@@ -17,7 +17,7 @@ import { useState } from "react"
 import Head from "next/head"
 
 interface BookProps {
-    _id: string
+    slug: string // Changed from _id to slug
     urlPath: string
     title: string
     author: string
@@ -31,20 +31,20 @@ interface BookProps {
     onAddToCart: () => void
 }
 
-const HeroSectionProduct = ({
-    _id,
-    urlPath,
+const HeroSectionProduct: React.FC<BookProps> = ({
+    slug, // Changed from _id to slug
     title,
     author,
-    description,
     reviews_number,
+    description,
     pages_number,
     release_year,
     genre,
     price,
-    rating = 0,
+    urlPath,
+    rating = 0, // Default value to avoid undefined
     onAddToCart,
-}: BookProps) => {
+}) => {
     const { token } = useAuth()
     const [isWishlisted, setIsWishlisted] = useState(false)
     const [message, setMessage] = useState<string | null>(null)
@@ -60,13 +60,13 @@ const HeroSectionProduct = ({
             return
         }
 
-        if (!_id || typeof _id !== "string" || _id.trim() === "") {
-            setMessage("Invalid book ID")
+        if (!slug || typeof slug !== "string" || slug.trim() === "") {
+            setMessage("Invalid book slug")
             return
         }
 
         try {
-            await addToWishlist(token, _id)
+            await addToWishlist(token, slug) // Use slug instead of _id
             setIsWishlisted(true)
             setMessage("Added to wishlist!")
             setTimeout(() => setMessage(null), 3000)

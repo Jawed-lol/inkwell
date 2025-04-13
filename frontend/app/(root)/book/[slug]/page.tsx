@@ -8,10 +8,11 @@ import HeroSectionProduct from "@/components/productPage/HeroSection"
 import ReviewProduct from "@/components/productPage/ReviewProduct"
 import BookDetailsSectionProduct from "@/components/productPage/BookDetailsSection"
 import RelatedBook from "@/components/productPage/RelatedBook"
-import { fetchBookById, fetchBooks } from "@/lib/api"
+import { fetchBookBySlug, fetchBooks } from "@/lib/api"
 import { useCart } from "@/context/CartContext"
+
 interface Book {
-    _id: string
+    slug: string // Changed from _id
     title: string
     author: string
     description: string
@@ -20,15 +21,16 @@ interface Book {
     price: number
     pages_number: number
     publication_year: number
-    publisher?: string
-    language?: string
-    isbn?: string
-    author_bio?: string
-    reviews?: Review[]
-    reviews_number?: number
+    publisher: string
+    language: string
+    isbn: string
+    author_bio: string
+    reviews: Review[]
+    reviews_number: number
+    synopsis: string
 }
+
 interface Review {
-    _id: string
     user_id: string
     rating: number
     comment?: string
@@ -37,7 +39,7 @@ interface Review {
 
 export default function BookPage() {
     const params = useParams()
-    const bookId = params.id as string
+    const bookSlug = params.slug as string // Changed from bookId
     const { addToCart } = useCart()
 
     const [book, setBook] = useState<Book | null>(null)
@@ -49,14 +51,14 @@ export default function BookPage() {
         const getBookDetails = async () => {
             try {
                 setLoading(true)
-                const bookData = await fetchBookById(bookId)
+                const bookData = await fetchBookBySlug(bookSlug)
                 setBook(bookData.data as Book)
 
                 const allBooks = await fetchBooks()
                 const filteredRelatedBooks = (allBooks.data as Book[])
                     .filter(
                         (b) =>
-                            b._id !== bookId &&
+                            b.slug !== bookSlug &&
                             b.genre === (bookData.data as Book).genre
                     )
                     .slice(0, 4)
@@ -70,8 +72,8 @@ export default function BookPage() {
             }
         }
 
-        if (bookId) getBookDetails()
-    }, [bookId])
+        if (bookSlug) getBookDetails()
+    }, [bookSlug])
 
     const fadeIn = {
         hidden: { opacity: 0, y: 20 },
@@ -153,7 +155,7 @@ export default function BookPage() {
                 />
                 <meta
                     property='og:url'
-                    content={`https://www.inkwellbookstore.com/book/${bookId}`}
+                    content={`https://www.inkwellbookstore.com/books/${bookSlug}`} // Changed from book to books
                 />
                 <meta
                     property='og:image'
@@ -185,7 +187,7 @@ export default function BookPage() {
                 />
                 <link
                     rel='canonical'
-                    href={`https://www.inkwellbookstore.com/book/${bookId}`}
+                    href={`https://www.inkwellbookstore.com/books/${bookSlug}`} // Changed from book to books
                 />
                 <link
                     rel='icon'
@@ -196,7 +198,7 @@ export default function BookPage() {
 
             <main className='bg-charcoalBlack min-h-screen'>
                 <HeroSectionProduct
-                    _id={book._id}
+                    slug={book.slug} // Changed from _id
                     title={book.title}
                     author={book.author}
                     reviews_number={book.reviews?.length || 0}
@@ -224,11 +226,8 @@ export default function BookPage() {
                             <div className='grid md:grid-cols-2 lg:grid-cols-3 gap-6'>
                                 {book.reviews.map((review) => (
                                     <ReviewProduct
-                                        key={
-                                            review._id ||
-                                            `${review.user_id}-${review.created_at}`
-                                        }
-                                        id={review._id || "0"}
+                                        key={`${review.user_id}-${review.created_at}`} // Removed _id
+                                        id={`${review.user_id}-${review.created_at}`} // Fallback ID
                                         author={review.user_id}
                                         rating={review.rating}
                                         text={review.comment || ""}
@@ -262,8 +261,8 @@ export default function BookPage() {
                             <div className='grid sm:grid-cols-2 lg:grid-cols-4 gap-6'>
                                 {relatedBooks.map((relatedBook) => (
                                     <RelatedBook
-                                        key={relatedBook._id}
-                                        id={relatedBook._id}
+                                        key={relatedBook.slug} // Changed from _id
+                                        id={relatedBook.slug} // Changed from _id
                                         title={relatedBook.title}
                                         author={relatedBook.author}
                                         coverPath={relatedBook.urlPath}

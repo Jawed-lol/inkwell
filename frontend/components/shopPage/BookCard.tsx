@@ -18,7 +18,7 @@ export default function BookCard({ book }: BookCardProps) {
 
     return (
         <Link
-            href={`/book/${book._id}`}
+            href={`/book/${book.slug}`}
             passHref>
             <motion.div
                 className='bg-deepGray rounded-lg overflow-hidden cursor-pointer'

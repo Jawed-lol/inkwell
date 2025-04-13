@@ -6,7 +6,7 @@ export interface Review {
 }
 
 export interface Book {
-    _id: string
+    slug: string
     title: string
     author: string
     description: string
@@ -14,12 +14,12 @@ export interface Book {
     price: number
     urlPath: string
     pages_number: number
-    publication_year: number | undefined
+    publication_year: number
+    synopsis: string
+    publisher: string
+    language: string
+    isbn: string
     author_bio?: string
-    publisher?: string
-    language?: string
-    isbn?: string
-    rating?: number
-    reviews_number?: number
-    reviews?: Review[]
+    reviews_number: number
+    reviews: Review[]
 }

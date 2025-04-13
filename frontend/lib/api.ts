@@ -1,23 +1,22 @@
-const BASE_URL = process.env.NEXT_PUBLIC_API_URL || "http://localhost:3000"
+const BASE_URL = process.env.NEXT_PUBLIC_API_URL + "/api"
 
 import axios from "axios"
 
 interface BookReviewData {
     user_id: string
     rating: number
-    _id?: string
     comment?: string
     created_at: string
 }
 
 interface BookData {
-    _id: string
+    slug: string // Changed from _id
     title: string
     author: string
     price: number
     urlPath: string
     synopsis: string
-    page_count: number
+    pages_number: number // Changed from page_count
     publication_year: number
     genre: string
     publisher: string
@@ -27,7 +26,6 @@ interface BookData {
     reviews_number: number
     author_bio?: string
     description: string
-    pages_number: number
 }
 
 interface UserProfileData {
@@ -110,7 +108,7 @@ interface WishlistResponse {
 
 interface OrderItemData {
     bookId: {
-        _id: string
+        slug: string // Changed from _id
         title: string
         urlPath: string
     }
@@ -172,7 +170,7 @@ export const registerUser = async (
 ): Promise<RegisterResponse> => {
     try {
         const response = await axios.post<RegisterResponse>(
-            `${BASE_URL}/api/auth/register`,
+            `${BASE_URL}/auth/register`,
             { first_name, second_name, email, password }
         )
         return response.data
@@ -185,7 +183,7 @@ export const loginUser = async (
     email: string,
     password: string
 ): Promise<LoginResponse> => {
-    const response = await fetch(`${BASE_URL}/api/auth/login`, {
+    const response = await fetch(`${BASE_URL}/auth/login`, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ email, password }),
@@ -195,18 +193,18 @@ export const loginUser = async (
 
 export const addToWishlist = async (
     token: string,
-    bookId: string
+    bookSlug: string // Changed from bookId
 ): Promise<WishlistResponse> => {
-    const response = await fetch(`${BASE_URL}/api/auth/wishlist`, {
+    const response = await fetch(`${BASE_URL}/auth/wishlist`, {
         method: "POST",
         headers: getAuthHeaders(token),
-        body: JSON.stringify({ bookId }),
+        body: JSON.stringify({ bookId: bookSlug }), // Backend might expect bookId as slug
     })
     return handleFetchResponse(response, "Failed to add to wishlist")
 }
 
 export const getWishlist = async (token: string): Promise<WishlistResponse> => {
-    const response = await fetch(`${BASE_URL}/api/auth/wishlist`, {
+    const response = await fetch(`${BASE_URL}/auth/wishlist`, {
         headers: getAuthHeaders(token),
     })
     return handleFetchResponse(response, "Failed to fetch wishlist")
@@ -214,9 +212,9 @@ export const getWishlist = async (token: string): Promise<WishlistResponse> => {
 
 export const removeFromWishlist = async (
     token: string,
-    bookId: string
+    bookSlug: string // Changed from bookId
 ): Promise<WishlistResponse> => {
-    const response = await fetch(`${BASE_URL}/api/auth/wishlist/${bookId}`, {
+    const response = await fetch(`${BASE_URL}/auth/wishlist/${bookSlug}`, {
         method: "DELETE",
         headers: getAuthHeaders(token),
     })
@@ -229,7 +227,7 @@ export const fetchBooks = async (
 ): Promise<FetchBooksResponse> => {
     try {
         const response = await axios.get<FetchBooksResponse>(
-            `${BASE_URL}/api/books`,
+            `${BASE_URL}/books`,
             {
                 params: { page, limit },
             }
@@ -240,10 +238,12 @@ export const fetchBooks = async (
     }
 }
 
-export const fetchBookById = async (id: string): Promise<FetchBookResponse> => {
+export const fetchBookBySlug = async (
+    slug: string
+): Promise<FetchBookResponse> => {
     try {
         const response = await axios.get<FetchBookResponse>(
-            `${BASE_URL}/api/books/${id}`
+            `${BASE_URL}/books/${slug}`
         )
         if (!response.data.success) {
             throw new Error(response.data.message || "Failed to fetch book")
@@ -259,7 +259,7 @@ export const fetchBooksBySearch = async (
 ): Promise<SearchBooksResponse> => {
     try {
         const response = await axios.get<SearchBooksResponse>(
-            `${BASE_URL}/api/books/search`,
+            `${BASE_URL}/books/search`,
             {
                 params: { q: query },
             }
@@ -285,7 +285,7 @@ export const updateProfile = async (
     token: string,
     data: { firstName?: string; lastName?: string; email?: string }
 ): Promise<UpdateProfileResponse> => {
-    const response = await fetch(`${BASE_URL}/api/auth/profile`, {
+    const response = await fetch(`${BASE_URL}/auth/profile`, {
         method: "PUT",
         headers: getAuthHeaders(token),
         body: JSON.stringify(data),
@@ -296,7 +296,7 @@ export const updateProfile = async (
 export const getProfile = async (
     token: string
 ): Promise<FetchProfileResponse> => {
-    const response = await fetch(`${BASE_URL}/api/auth/profile`, {
+    const response = await fetch(`${BASE_URL}/auth/profile`, {
         headers: getAuthHeaders(token),
     })
     return handleFetchResponse(response, "Failed to fetch profile")
@@ -305,7 +305,7 @@ export const getProfile = async (
 export const getOrders = async (
     token: string
 ): Promise<FetchOrdersResponse> => {
-    const response = await fetch(`${BASE_URL}/api/auth/orders`, {
+    const response = await fetch(`${BASE_URL}/auth/orders`, {
         headers: getAuthHeaders(token),
     })
     return handleFetchResponse(response, "Failed to fetch orders")
@@ -315,7 +315,7 @@ export const placeOrder = async (
     token: string,
     items: OrderItemData[]
 ): Promise<PlaceOrderResponse> => {
-    const response = await fetch(`${BASE_URL}/api/orders`, {
+    const response = await fetch(`${BASE_URL}/orders`, {
         method: "POST",
         headers: getAuthHeaders(token),
         body: JSON.stringify({ items }),

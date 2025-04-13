@@ -105,7 +105,7 @@ export default function CheckoutPage() {
                             <ul className='space-y-4'>
                                 {cart.map((item) => (
                                     <li
-                                        key={item._id}
+                                        key={item.slug}
                                         className='flex flex-col sm:flex-row justify-between items-center gap-2 sm:gap-4 border-b border-darkMocha pb-2'>
                                         <span className='text-warmBeige font-generalSans'>
                                             {item.title} ({item.quantity})

@@ -30,12 +30,12 @@ function CartPage() {
     }, [])
 
     const handleIncreaseQuantity = (bookId: string) => {
-        const item = cart.find((i) => i._id === bookId)
+        const item = cart.find((i) => i.slug === bookId)
         if (item) updateQuantity(bookId, item.quantity + 1)
     }
 
     const handleDecreaseQuantity = (bookId: string) => {
-        const item = cart.find((i) => i._id === bookId)
+        const item = cart.find((i) => i.slug === bookId)
         if (item) updateQuantity(bookId, item.quantity - 1)
     }
 
@@ -139,7 +139,7 @@ function CartPage() {
                                 <AnimatePresence>
                                     {cart.map((item) => (
                                         <motion.article
-                                            key={item._id}
+                                            key={item.slug}
                                             initial={{ opacity: 0, y: 20 }}
                                             animate={{ opacity: 1, y: 0 }}
                                             exit={{ opacity: 0, y: -20 }}
@@ -186,7 +186,7 @@ function CartPage() {
                                                     <button
                                                         onClick={() =>
                                                             handleDecreaseQuantity(
-                                                                item._id
+                                                                item.slug
                                                             )
                                                         }
                                                         className='bg-burntAmber text-darkMutedTeal font-generalSans font-bold w-8 h-8 rounded-full hover:bg-deepCopper transition duration-200'
@@ -201,7 +201,7 @@ function CartPage() {
                                                     <button
                                                         onClick={() =>
                                                             handleIncreaseQuantity(
-                                                                item._id
+                                                                item.slug
                                                             )
                                                         }
                                                         className='bg-burntAmber text-darkMutedTeal font-generalSans font-bold w-8 h-8 rounded-full hover:bg-deepCopper transition duration-200'
@@ -211,7 +211,9 @@ function CartPage() {
                                                 </div>
                                                 <button
                                                     onClick={() =>
-                                                        removeFromCart(item._id)
+                                                        removeFromCart(
+                                                            item.slug
+                                                        )
                                                     }
                                                     className='text-mutedSand hover:text-burntAmber transition duration-200'
                                                     aria-label={`Remove ${item.title || "item"} from cart`}>

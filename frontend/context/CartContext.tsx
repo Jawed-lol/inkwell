@@ -29,13 +29,13 @@ interface CartItem extends Book {
 interface CartContextType {
     cart: CartItem[]
     addToCart: (book: Book) => void
-    updateQuantity: (bookId: string, quantity: number) => void
-    removeFromCart: (bookId: string) => void
+    updateQuantity: (bookSlug: string, quantity: number) => void // Changed from bookId
+    removeFromCart: (bookSlug: string) => void // Changed from bookId
     clearCart: () => void
 }
 
 interface CartApiPayloadItem {
-    _id: string
+    slug: string // Changed from _id
     quantity: number
 }
 
@@ -48,7 +48,7 @@ interface CartApiError {
     message: string
 }
 
-const API_URL = "https://inkwell-oblr.onrender.com/api/cart"
+const API_URL = process.env.NEXT_PUBLIC_API_URL + "/cart" // Adjusted to /cart
 const CART_STORAGE_KEY = "cart"
 const DEBOUNCE_DELAY = 500
 
@@ -65,7 +65,7 @@ export const CartProvider = ({ children }: { children: ReactNode }) => {
             try {
                 const payload: CartApiPayloadItem[] = updatedCart.map(
                     (item) => ({
-                        _id: item._id,
+                        slug: item.slug, // Changed from _id
                         quantity: item.quantity,
                     })
                 )
@@ -168,13 +168,13 @@ export const CartProvider = ({ children }: { children: ReactNode }) => {
         (book: Book) => {
             setCart((prevCart) => {
                 const existingItem = prevCart.find(
-                    (item) => item._id === book._id
-                )
+                    (item) => item.slug === book.slug
+                ) // Changed from _id
                 const safeBook = { ...book, price: book.price ?? 0 }
 
                 const newCart = existingItem
                     ? prevCart.map((item) =>
-                          item._id === book._id
+                          item.slug === book.slug
                               ? { ...item, quantity: item.quantity + 1 }
                               : item
                       )
@@ -188,13 +188,15 @@ export const CartProvider = ({ children }: { children: ReactNode }) => {
     )
 
     const updateQuantity = useCallback(
-        (bookId: string, quantity: number) => {
+        (bookSlug: string, quantity: number) => {
             setCart((prevCart) => {
                 const newCart =
                     quantity <= 0
-                        ? prevCart.filter((item) => item._id !== bookId)
+                        ? prevCart.filter((item) => item.slug !== bookSlug)
                         : prevCart.map((item) =>
-                              item._id === bookId ? { ...item, quantity } : item
+                              item.slug === bookSlug
+                                  ? { ...item, quantity }
+                                  : item
                           )
 
                 debouncedSyncCart(newCart)
@@ -205,9 +207,11 @@ export const CartProvider = ({ children }: { children: ReactNode }) => {
     )
 
     const removeFromCart = useCallback(
-        (bookId: string) => {
+        (bookSlug: string) => {
             setCart((prevCart) => {
-                const newCart = prevCart.filter((item) => item._id !== bookId)
+                const newCart = prevCart.filter(
+                    (item) => item.slug !== bookSlug
+                )
                 debouncedSyncCart(newCart)
                 return newCart
             })

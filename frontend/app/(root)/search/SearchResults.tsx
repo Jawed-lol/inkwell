@@ -1,4 +1,3 @@
-// app/(root)/search/SearchResults.tsx
 "use client"
 
 import { useState, useEffect } from "react"
@@ -8,7 +7,7 @@ import { motion, AnimatePresence } from "framer-motion"
 import { fetchBooksBySearch } from "@/lib/api"
 
 interface Book {
-    _id: string
+    slug: string
     title: string
     author: string
     price: number
@@ -47,7 +46,6 @@ const SearchResults = ({ query }: SearchResultsProps) => {
         fetchSearchResults()
     }, [query])
 
-    // Animation variants for the book cards
     const cardVariants = {
         hidden: { opacity: 0, y: 20 },
         visible: (i: number) => ({
@@ -91,7 +89,7 @@ const SearchResults = ({ query }: SearchResultsProps) => {
                         <div className='grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-6'>
                             {books.map((book, index) => (
                                 <motion.div
-                                    key={book._id}
+                                    key={book.slug}
                                     custom={index}
                                     initial='hidden'
                                     animate='visible'
@@ -99,7 +97,7 @@ const SearchResults = ({ query }: SearchResultsProps) => {
                                     variants={cardVariants}
                                     whileHover='hover'
                                     className='bg-deepGray rounded-lg overflow-hidden shadow-md'>
-                                    <Link href={`/book/${book._id}`}>
+                                    <Link href={`/book/${book.slug}`}>
                                         <div className='relative w-full h-48'>
                                             <Image
                                                 src={

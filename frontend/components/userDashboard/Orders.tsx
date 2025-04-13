@@ -9,7 +9,7 @@ import Head from "next/head"
 
 // TypeScript interfaces for better type safety
 interface Book {
-    _id: string
+    slug: string
     title: string
     urlPath: string
 }

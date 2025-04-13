@@ -187,7 +187,7 @@ export default function ShopPage() {
                                     <ul className='space-y-2'>
                                         {cart.map((item) => (
                                             <li
-                                                key={item._id}
+                                                key={item.slug}
                                                 className='text-sm sm:text-base'>
                                                 {item.title} - $
                                                 {item.price != null

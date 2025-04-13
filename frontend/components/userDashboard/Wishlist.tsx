@@ -10,7 +10,7 @@ import { motion } from "framer-motion"
 import Link from "next/link"
 
 interface Book {
-    _id: string
+    slug: string
     title: string
     author: string
     price: number
@@ -52,7 +52,7 @@ export default function Wishlist() {
 
         try {
             await removeFromWishlist(token, bookId)
-            setWishlist(wishlist.filter((book) => book._id !== bookId))
+            setWishlist(wishlist.filter((book) => book.slug !== bookId))
         } catch {
             setError("Failed to remove item. Please try again.")
         }
@@ -183,12 +183,12 @@ export default function Wishlist() {
                     <div className='space-y-4'>
                         {wishlist.map((book) => (
                             <motion.article
-                                key={book._id}
+                                key={book.slug}
                                 initial={{ opacity: 0 }}
                                 animate={{ opacity: 1 }}
                                 transition={{ duration: 0.3 }}
                                 className='flex items-center gap-4 bg-slightlyLightGrey p-4 rounded-lg'
-                                aria-labelledby={`book-title-${book._id}`}>
+                                aria-labelledby={`book-title-${book.slug}`}>
                                 <Image
                                     src={book.urlPath || "/placeholder.svg"}
                                     alt={`${book.title} cover`}
@@ -199,7 +199,7 @@ export default function Wishlist() {
                                 />
                                 <div className='flex-1'>
                                     <h2
-                                        id={`book-title-${book._id}`}
+                                        id={`book-title-${book.slug}`}
                                         className='text-warmBeige font-semibold text-lg'>
                                         {book.title}
                                     </h2>
@@ -213,14 +213,14 @@ export default function Wishlist() {
                                 <div className='flex gap-2'>
                                     <button
                                         onClick={() =>
-                                            handleAddToCart(book._id)
+                                            handleAddToCart(book.slug)
                                         }
                                         className='p-2 bg-burntAmber text-darkMutedTeal rounded-lg hover:bg-deepCopper focus:outline-none focus:ring-2 focus:ring-burntAmber'
                                         aria-label={`Add ${book.title} to cart`}>
                                         <ShoppingCart size={20} />
                                     </button>
                                     <button
-                                        onClick={() => handleRemove(book._id)}
+                                        onClick={() => handleRemove(book.slug)}
                                         className='p-2 bg-deepCopper text-warmBeige rounded-lg hover:bg-burntAmber focus:outline-none focus:ring-2 focus:ring-deepCopper'
                                         aria-label={`Remove ${book.title} from wishlist`}>
                                         <Trash2 size={20} />

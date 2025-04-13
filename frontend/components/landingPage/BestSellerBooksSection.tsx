@@ -5,7 +5,7 @@ import { useState, useEffect } from "react"
 import BestSellerBookCard from "@/components/landingPage/BestSellerBookCard"
 
 type BookProps = {
-    _id: string
+    slug: string
     title: string
     author: string
     rating: number
@@ -15,6 +15,18 @@ type BookProps = {
     genre: string
     pages_number: number
     publication_year: number
+    publisher: string
+    synopsis: string
+    language: string
+    isbn: string
+    reviews_number: number
+    reviews: {
+        id: string
+        content: string
+        rating: number
+        user_id: string
+        created_at: string
+    }[]
 }
 
 const BestSellerBooksSection = () => {
@@ -81,7 +93,7 @@ const BestSellerBooksSection = () => {
                     }>
                     {books.map((book) => (
                         <motion.div
-                            key={book._id}
+                            key={book.slug}
                             initial={{ opacity: 0, y: 20 }}
                             whileInView={{ opacity: 1, y: 0 }}
                             viewport={{ once: true }}

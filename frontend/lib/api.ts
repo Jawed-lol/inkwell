@@ -7,7 +7,7 @@ interface BookReviewData {
     rating: number
     _id?: string
     comment?: string
-    created_at?: string
+    created_at: string
 }
 
 interface BookData {
@@ -26,8 +26,8 @@ interface BookData {
     reviews: BookReviewData[]
     reviews_number: number
     author_bio?: string
-    description?: string
-    pages_number?: number
+    description: string
+    pages_number: number
 }
 
 interface UserProfileData {

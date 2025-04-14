@@ -44,7 +44,7 @@ router.post(
           throw new Error(`Price mismatch for book ${item._id}`);
         }
         return {
-          bookId: item._id,
+          bookSlug: book.slug,  // Changed from bookId to bookSlug to match User schema
           quantity: item.quantity,
           price: item.price,
         };

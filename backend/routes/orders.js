@@ -1,11 +1,11 @@
 const express = require('express');
 const router = express.Router();
-const { v4: uuidv4 } = require('uuid');
 const User = require('../models/User');
 const { Book } = require('../models/Books');
 const authMiddleware = require('../middleware/auth');
-const { body, validationResult } = require('express-validator');
+const mongoose = require('mongoose');
 
+// POST route (your modified solution)
 router.post(
   '/',
   authMiddleware,
@@ -44,7 +44,7 @@ router.post(
           throw new Error(`Price mismatch for book ${item._id}`);
         }
         return {
-          bookSlug: book.slug,  // Changed from bookId to bookSlug to match User schema
+          bookSlug: book.slug,  // Using bookSlug instead of bookId
           quantity: item.quantity,
           price: item.price,
         };
@@ -71,5 +71,53 @@ router.post(
     }
   }
 );
+
+// GET route for fetching user orders - FIXED to use bookSlug instead of bookId
+router.get('/', authMiddleware, async (req, res) => {
+  try {
+    const user = await User.findById(req.user.id);
+    if (!user) {
+      return res.status(404).json({ message: 'User not found' });
+    }
+
+    // Get all unique book slugs from all orders
+    const bookSlugs = new Set();
+    user.orders.forEach(order => {
+      order.items.forEach(item => {
+        bookSlugs.add(item.bookSlug);
+      });
+    });
+
+    // Fetch all books referenced in orders
+    const books = await Book.find({ slug: { $in: Array.from(bookSlugs) } });
+    const bookMap = new Map(books.map(book => [book.slug, book]));
+
+    // Manually "populate" the book details in the response
+    const ordersWithDetails = user.orders.map(order => {
+      const orderObj = order.toObject();
+      orderObj.items = orderObj.items.map(item => {
+        const book = bookMap.get(item.bookSlug);
+        return {
+          ...item,
+          book: book ? {
+            _id: book._id,
+            title: book.title,
+            author: book.author,
+            price: book.price,
+            slug: book.slug,
+            // Add any other book fields you need
+          } : null
+        };
+      });
+      return orderObj;
+    });
+
+    res.json({ orders: ordersWithDetails });
+    
+  } catch (error) {
+    console.error('Fetch orders error:', error);
+    res.status(500).json({ message: 'Failed to fetch orders' });
+  }
+});
 
 module.exports = router;

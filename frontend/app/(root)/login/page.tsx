@@ -1,11 +1,11 @@
-"use client" // Add this at the top to mark it as a Client Component
+"use client"
 
 import Image from "next/image"
 import Link from "next/link"
 import { useState, useEffect } from "react"
 import { useRouter } from "next/navigation"
 import Head from "next/head"
-import { loginUser } from "@/lib/api"
+import { authService } from "@/lib/api"
 import { useAuth } from "@/context/AuthContext"
 
 export default function Login() {
@@ -22,7 +22,7 @@ export default function Login() {
     }, [user, router])
 
     useEffect(() => {
-        document.title = "Login | Your Account | Bookstore Name"
+        document.title = "Login | Your Account | Inkwell"
     }, [])
 
     const handleChange = (e: React.ChangeEvent<HTMLInputElement>) => {
@@ -36,15 +36,16 @@ export default function Login() {
     const handleSubmit = async (e: React.FormEvent) => {
         e.preventDefault()
         setError(null)
-
+    
         try {
-            const data = await loginUser(formData.email, formData.password)
-
-            if (!data.token) {
+            const response = await authService.login(formData.email, formData.password)
+            
+            // Check if token exists instead of success property
+            if (!response.token) {
                 throw new Error("Authentication failed: No token received")
             }
-
-            login(data.token)
+    
+            login(response.token)
             router.push("/dashboard")
         } catch (err) {
             setError(

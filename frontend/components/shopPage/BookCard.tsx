@@ -43,7 +43,7 @@ export default function BookCard({ book }: BookCardProps) {
                         {book.title}
                     </h3>
                     <p className='font-generalSans text-[10px] md:text-[12px] lg:text-sm leading-3 md:leading-4 lg:leading-5 text-mutedSand text-center mb-1'>
-                        {book.author}
+                        {book.author.name}
                     </p>
                     <p className='font-generalSans font-bold text-[12px] md:text-sm lg:text-[16px] leading-4 md:leading-5 lg:leading-6 text-burntAmber text-center mb-3'>
                         ${book.price.toFixed(2)}

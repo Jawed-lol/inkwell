@@ -8,38 +8,15 @@ import HeroSectionProduct from "@/components/productPage/HeroSection"
 import ReviewProduct from "@/components/productPage/ReviewProduct"
 import BookDetailsSectionProduct from "@/components/productPage/BookDetailsSection"
 import RelatedBook from "@/components/productPage/RelatedBook"
-import { fetchBookBySlug, fetchBooks } from "@/lib/api"
+import { bookService } from "@/lib/api"
 import { useCart } from "@/context/CartContext"
+import { Book } from "@/types/book"
 
-interface Book {
-    slug: string // Changed from _id
-    title: string
-    author: string
-    description: string
-    genre: string
-    urlPath: string
-    price: number
-    pages_number: number
-    publication_year: number
-    publisher: string
-    language: string
-    isbn: string
-    author_bio: string
-    reviews: Review[]
-    reviews_number: number
-    synopsis: string
-}
 
-interface Review {
-    user_id: string
-    rating: number
-    comment?: string
-    created_at: string
-}
 
 export default function BookPage() {
     const params = useParams()
-    const bookSlug = params.slug as string // Changed from bookId
+    const bookSlug = params.slug as string
     const { addToCart } = useCart()
 
     const [book, setBook] = useState<Book | null>(null)
@@ -51,15 +28,22 @@ export default function BookPage() {
         const getBookDetails = async () => {
             try {
                 setLoading(true)
-                const bookData = await fetchBookBySlug(bookSlug)
-                setBook(bookData.data as Book)
+                const bookResponse = await bookService.fetchBySlug(bookSlug)
+                if (!bookResponse.success || !bookResponse.data) {
+                    throw new Error("Book not found")
+                }
+                setBook(bookResponse.data as Book)
 
-                const allBooks = await fetchBooks()
-                const filteredRelatedBooks = (allBooks.data as Book[])
+                const booksResponse = await bookService.fetchBooks(1, 12)
+                if (!booksResponse.success || !Array.isArray(booksResponse.data)) {
+                    throw new Error("Failed to load related books")
+                }
+                
+                const filteredRelatedBooks = booksResponse.data
                     .filter(
                         (b) =>
                             b.slug !== bookSlug &&
-                            b.genre === (bookData.data as Book).genre
+                            b.genre === bookResponse.data.genre
                     )
                     .slice(0, 4)
 
@@ -99,7 +83,7 @@ export default function BookPage() {
     const bookDetails = {
         synopsis: book.description,
         aboutAuthor:
-            book.author_bio || "Information about the author not available.",
+            book.author.author_bio || "Information about the author not available.",
         publisher: book.publisher || "Unknown publisher",
         language: book.language || "English",
         pages_number: book.pages_number,
@@ -139,7 +123,7 @@ export default function BookPage() {
                 />
                 <meta
                     name='author'
-                    content={book.author}
+                    content={book.author.name}
                 />
                 <meta
                     property='og:title'
@@ -200,7 +184,7 @@ export default function BookPage() {
                 <HeroSectionProduct
                     slug={book.slug} // Changed from _id
                     title={book.title}
-                    author={book.author}
+                    author={book.author.name}
                     reviews_number={book.reviews?.length || 0}
                     description={book.description}
                     pages_number={book.pages_number}
@@ -264,7 +248,7 @@ export default function BookPage() {
                                         key={relatedBook.slug} // Changed from _id
                                         id={relatedBook.slug} // Changed from _id
                                         title={relatedBook.title}
-                                        author={relatedBook.author}
+                                        author={relatedBook.author.name}
                                         coverPath={relatedBook.urlPath}
                                         rating={
                                             relatedBook.reviews &&

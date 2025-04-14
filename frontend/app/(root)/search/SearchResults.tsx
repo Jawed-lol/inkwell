@@ -4,18 +4,8 @@ import { useState, useEffect } from "react"
 import Image from "next/image"
 import Link from "next/link"
 import { motion, AnimatePresence } from "framer-motion"
-import { fetchBooksBySearch } from "@/lib/api"
-
-interface Book {
-    slug: string
-    title: string
-    author: string
-    price: number
-    urlPath: string
-    reviews: { rating: number }[]
-    reviews_number: number
-}
-
+import { bookService } from "@/lib/api"
+import { Book } from "@/types/book"
 interface SearchResultsProps {
     query: string
 }
@@ -33,8 +23,11 @@ const SearchResults = ({ query }: SearchResultsProps) => {
             }
             setLoading(true)
             try {
-                const { data } = await fetchBooksBySearch(query)
-                setBooks(data || [])
+                const response = await bookService.search(query)
+                if (!response.success) {
+                    throw new Error(response.message || "Failed to search books")
+                }
+                setBooks(response.data || [])
             } catch (err: unknown) {
                 setError(
                     err instanceof Error ? err.message : "An error occurred"
@@ -114,7 +107,7 @@ const SearchResults = ({ query }: SearchResultsProps) => {
                                                 {book.title}
                                             </h2>
                                             <p className='text-sm text-mutedSand'>
-                                                {book.author}
+                                                {book.author.name}
                                             </p>
                                             <p className='text-burntAmber font-bold mt-2'>
                                                 ${book.price.toFixed(2)}

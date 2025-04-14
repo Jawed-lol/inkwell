@@ -4,7 +4,7 @@ import { useAuth } from "@/context/AuthContext"
 import { ShoppingBag, Heart, Edit } from "lucide-react"
 import Link from "next/link"
 import { useState, useEffect } from "react"
-import { getProfile } from "@/lib/api"
+import { authService } from "@/lib/api"
 
 interface ProfileData {
     name: string
@@ -24,7 +24,7 @@ export default function Profile() {
 
         const fetchProfile = async () => {
             try {
-                const response = await getProfile(token)
+                const response = await authService.getProfile(token)
                 const formattedData: ProfileData = {
                     name: response.name || "",
                     email: response.email || "",

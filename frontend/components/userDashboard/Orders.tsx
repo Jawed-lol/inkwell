@@ -2,22 +2,19 @@
 
 import { useAuth } from "@/context/AuthContext"
 import { useState, useEffect } from "react"
-import { getOrders } from "@/lib/api"
+import { orderService } from "@/lib/api"
 import { ShoppingBag } from "lucide-react"
 import Image from "next/image"
 import Head from "next/head"
+import { Book } from "@/types/book"
 
-// TypeScript interfaces for better type safety
-interface Book {
-    slug: string
-    title: string
-    urlPath: string
-}
-
+// TypeScript interfaces
 interface OrderItem {
-    bookId: Book
+    bookSlug: string
+    book: Book | null
     quantity: number
     price: number
+    _id: string
 }
 
 interface Order {
@@ -33,28 +30,22 @@ export default function Orders() {
     const [orders, setOrders] = useState<Order[]>([])
     const [error, setError] = useState<string | null>(null)
     const [isLoading, setIsLoading] = useState(false)
-    const pageTitle = "Your Order History | Book Store"
+    const pageTitle = "Your Order History | Inkwell"
     const pageDescription =
         "View and track all your book orders in one place. Check order status, items purchased, and order details."
 
     useEffect(() => {
-        // Only fetch orders if user is authenticated
         if (!token) return
 
         const fetchOrders = async () => {
             setIsLoading(true)
             try {
-                const response = await getOrders(token)
-
-                // Handle both array response and object with data property
-                if (Array.isArray(response)) {
-                    setOrders(response)
-                } else if (response && typeof response === "object") {
-                    setOrders(response.data || [])
-                } else {
-                    throw new Error("Invalid response format")
+                const response = await orderService.get(token)
+                // Remove console.log in production
+                if (!response.success) {
+                    throw new Error(response.message || "Failed to fetch orders")
                 }
-
+                setOrders(response.orders || [])
                 setError(null)
             } catch (error) {
                 console.error("Error fetching orders:", error)
@@ -70,7 +61,6 @@ export default function Orders() {
         fetchOrders()
     }, [token])
 
-    // Format date in a more readable way
     const formatDate = (dateString: string) => {
         return new Date(dateString).toLocaleDateString("en-US", {
             year: "numeric",
@@ -91,7 +81,7 @@ export default function Orders() {
         )
     }
 
-    // Unauthenticated state
+    // Not logged in state
     if (!token) {
         return (
             <section className='text-mutedSand text-center py-8'>
@@ -101,6 +91,7 @@ export default function Orders() {
         )
     }
 
+    // Render order history
     return (
         <>
             <Head>
@@ -133,6 +124,7 @@ export default function Orders() {
                     name='twitter:description'
                     content={pageDescription}
                 />
+                <link rel="canonical" href="/dashboard/orders" />
             </Head>
 
             <section
@@ -154,8 +146,8 @@ export default function Orders() {
 
                 {orders.length === 0 && !error ? (
                     <p className='text-mutedSand text-center py-4'>
-                        You haven&lsquo;t placed any orders yet. Start shopping
-                        to see your orders here!
+                        You haven&apos;t placed any orders yet. Start shopping to see
+                        your orders here!
                     </p>
                 ) : (
                     <ul className='space-y-4 sm:space-y-6'>
@@ -187,22 +179,30 @@ export default function Orders() {
                                 <ul className='space-y-3'>
                                     {order.items.map((item, index) => {
                                         const bookTitle =
-                                            item.bookId?.title || "Unknown book"
+                                            item.book?.title || "Unknown book"
+                                        const bookAuthor = 
+                                            typeof item.book?.author === 'object' 
+                                                ? item.book.author.name 
+                                                : item.book?.author || "Unknown author"
                                         const bookImage =
-                                            item.bookId?.urlPath ||
-                                            "/placeholder.svg"
-
+                                            item.book?.urlPath ||
+                                            "/images/placeholder.jpg"
+                                        
                                         return (
                                             <li
                                                 key={`${order._id}-item-${index}`}
                                                 className='flex flex-col sm:flex-row items-center gap-3 sm:gap-4'>
                                                 <Image
                                                     src={bookImage}
-                                                    alt={`Cover for ${bookTitle}`}
+                                                    alt={`Cover for ${bookTitle} by ${bookAuthor}`}
                                                     width={50}
                                                     height={75}
                                                     className='rounded-lg object-cover w-[50px] h-[75px] sm:w-[60px] sm:h-[90px]'
                                                     loading='lazy'
+                                                    onError={(e) => {
+                                                        e.currentTarget.src =
+                                                            "/images/placeholder.jpg"
+                                                    }}
                                                 />
                                                 <div className='flex-1 text-center sm:text-left'>
                                                     <h3 className='text-warmBeige font-semibold text-sm sm:text-base'>
@@ -212,7 +212,7 @@ export default function Orders() {
                                                         <span className='sr-only'>
                                                             Quantity:
                                                         </span>{" "}
-                                                        {item.quantity} |
+                                                        {item.quantity} |{" "}
                                                         <span className='sr-only'>
                                                             Price:
                                                         </span>{" "}

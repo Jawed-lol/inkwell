@@ -6,7 +6,7 @@ import Head from "next/head"
 import FiltersSidebar from "@/components/shopPage/FiltersSidebar"
 import BookGrid from "@/components/shopPage/BookGrid"
 import { Book } from "@/types/book"
-import { fetchBooks } from "@/lib/api"
+import { bookService } from "@/lib/api"
 import { useCart } from "@/context/CartContext"
 
 export default function ShopPage() {
@@ -25,7 +25,7 @@ export default function ShopPage() {
         const loadBooks = async () => {
             try {
                 setLoading(true)
-                const response = await fetchBooks(currentPage, 12)
+                const response = await bookService.fetchBooks(currentPage, 12)
                 setBooks(response.data)
                 setTotalPages(response.totalPages ?? 1) // Fallback to 1 if totalPages is undefined
             } catch (error) {
@@ -55,7 +55,7 @@ export default function ShopPage() {
 
             const authorMatch =
                 authorSearch === "" ||
-                book.author.toLowerCase().includes(authorSearch.toLowerCase())
+                book.author.name.toLowerCase().includes(authorSearch.toLowerCase())
 
             const ratingMatch =
                 reviews.length === 0 ||

@@ -2,7 +2,7 @@
 
 import { useAuth } from "@/context/AuthContext"
 import { useState, useEffect } from "react"
-import { getProfile, updateProfile } from "@/lib/api"
+import { authService } from "@/lib/api"
 
 interface ProfileFormData {
     firstName: string
@@ -19,7 +19,6 @@ interface ProfileResponse {
     email?: string
     userEmail?: string
     user_email?: string
-    [key: string]: unknown
 }
 
 interface ProfileUpdatePayload {
@@ -43,20 +42,26 @@ export default function Settings() {
         if (token) {
             const fetchProfile = async () => {
                 try {
-                    const responseData = (await getProfile(
-                        token
-                    )) as unknown as ProfileResponse
+                    const response = await authService.getProfile(token)
+                    
+                    // Check if response exists and has necessary data
+                    if (!response || typeof response !== 'object') {
+                        throw new Error("Failed to load profile")
+                    }
+                    
+                    // Use response directly
+                    const responseData = response as ProfileResponse
 
                     setFormData({
                         firstName:
                             responseData.firstName ||
                             responseData.first_name ||
-                            responseData.name?.split(" ")[0] ||
+                            (responseData.name && typeof responseData.name === 'string' ? responseData.name.split(" ")[0] : "") ||
                             "",
                         lastName:
                             responseData.lastName ||
                             responseData.last_name ||
-                            responseData.name?.split(" ")[1] ||
+                            (responseData.name && typeof responseData.name === 'string' ? responseData.name.split(" ")[1] : "") ||
                             "",
                         email:
                             responseData.email ||
@@ -86,26 +91,22 @@ export default function Settings() {
                 name: `${formData.firstName} ${formData.lastName}`.trim(),
             }
 
-            const updatedData = (await updateProfile(
-                token!,
-                updatePayload as unknown as Record<string, unknown>
-            )) as unknown as ProfileResponse
-
+            const response = await authService.updateProfile(token!, updatePayload)
+            
+            if (!response || response.success === false) {
+                throw new Error("Failed to update profile")
+            }
+            
+            // Update form data with response values or keep current values
             setFormData({
-                firstName:
-                    updatedData.firstName ||
-                    updatedData.first_name ||
-                    updatedData.name?.split(" ")[0] ||
+                firstName:  
+                    (response.name ? response.name.split(" ")[0] : "") || 
                     formData.firstName,
                 lastName:
-                    updatedData.lastName ||
-                    updatedData.last_name ||
-                    updatedData.name?.split(" ")[1] ||
+                    (response.name ? response.name.split(" ")[1] : "") || 
                     formData.lastName,
                 email:
-                    updatedData.email ||
-                    updatedData.userEmail ||
-                    updatedData.user_email ||
+                    response.email || 
                     formData.email,
             })
 

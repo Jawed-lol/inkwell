@@ -3,7 +3,7 @@
 import Image from "next/image"
 import Link from "next/link"
 import { useState } from "react"
-import { registerUser } from "@/lib/api"
+import { authService } from "@/lib/api"
 import Head from "next/head"
 
 interface FormData {
@@ -49,15 +49,15 @@ export default function Register() {
         }
 
         try {
-            const data = await registerUser(
+            const response = await authService.register(
                 formData.first_name,
                 formData.second_name,
                 formData.email,
                 formData.password
             )
 
-            if (data?.token) {
-                localStorage.setItem("token", data.token)
+            if (response.success && response.token) {
+                localStorage.setItem("token", response.token)
                 setMessage(
                     "Account created successfully! Redirecting to login page..."
                 )
@@ -65,7 +65,7 @@ export default function Register() {
                     window.location.href = "/login"
                 }, 2000)
             } else {
-                throw new Error("Invalid response from server")
+                throw new Error(response.message || "Invalid response from server")
             }
         } catch (err) {
             const errorMessage =

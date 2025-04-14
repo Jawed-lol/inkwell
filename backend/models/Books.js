@@ -1,5 +1,5 @@
 const mongoose = require('mongoose');
-const slugify = require('slugify'); 
+const slugify = require('slugify');
 
 // Author Schema
 const authorSchema = new mongoose.Schema({
@@ -32,6 +32,7 @@ const bookSchema = new mongoose.Schema({
   reviews_number: { type: Number, default: 0 },
   reviews: [reviewSchema],
   slug: { type: String, required: true, unique: true, trim: true, index: true },
+  stock: { type: Number, required: true, min: 0, default: 0 },
 });
 
 // Pre-save middleware to generate unique slug
@@ -41,7 +42,6 @@ bookSchema.pre('save', async function (next) {
     let slug = baseSlug;
     let counter = 1;
 
-    // Check for existing slugs, excluding the current document
     while (await mongoose.model('Book').findOne({ slug, _id: { $ne: this._id } })) {
       slug = `${baseSlug}-${counter}`;
       counter++;

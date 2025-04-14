@@ -10,6 +10,8 @@ type CheckoutError = {
     message: string
 }
 
+const API_URL = process.env.NEXT_PUBLIC_API_URL
+
 export default function CheckoutPage() {
     const { cart, clearCart } = useCart()
     const { token } = useAuth()
@@ -32,15 +34,26 @@ export default function CheckoutPage() {
         setError(null)
 
         try {
+            // Format cart items according to what the backend expects
+            const orderItems = cart.map(item => ({
+                bookSlug: item.slug, // Backend expects 'bookSlug', not 'slug'
+                quantity: item.quantity,
+                price: item.price || 0
+            }));
+
+            if (orderItems.length === 0) {
+                throw new Error("No items in cart");
+            }
+
             const response = await fetch(
-                "https://inkwell-oblr.onrender.com/api/orders",
+                API_URL+"/api/orders",
                 {
                     method: "POST",
                     headers: {
                         "Content-Type": "application/json",
                         Authorization: `Bearer ${token}`,
                     },
-                    body: JSON.stringify({ items: cart }),
+                    body: JSON.stringify({ items: orderItems }),
                 }
             )
 

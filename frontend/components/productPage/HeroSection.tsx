@@ -12,7 +12,7 @@ import {
     Tag,
 } from "lucide-react"
 import { useAuth } from "@/context/AuthContext"
-import { addToWishlist } from "@/lib/api"
+import { wishlistService } from "@/lib/api"
 import { useState } from "react"
 import Head from "next/head"
 
@@ -59,14 +59,12 @@ const HeroSectionProduct: React.FC<BookProps> = ({
             setMessage("Please log in to add to wishlist")
             return
         }
-
         if (!slug || typeof slug !== "string" || slug.trim() === "") {
             setMessage("Invalid book slug")
             return
         }
-
         try {
-            await addToWishlist(token, slug) // Use slug instead of _id
+            await wishlistService.add(token, slug)
             setIsWishlisted(true)
             setMessage("Added to wishlist!")
             setTimeout(() => setMessage(null), 3000)

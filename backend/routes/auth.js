@@ -3,6 +3,7 @@ const bcrypt = require('bcryptjs');
 const jwt = require('jsonwebtoken');
 const mongoose = require('mongoose');
 const User = require('../models/User');
+const { Book } = require('../models/Books');
 const authMiddleware = require('../middleware/auth');
 const { body, validationResult } = require('express-validator');
 
@@ -20,14 +21,14 @@ router.post(
   async (req, res) => {
     const errors = validationResult(req);
     if (!errors.isEmpty()) {
-      return res.status(400).json({ message: errors.array()[0].msg });
+      return res.status(400).json({ success: false, message: errors.array()[0].msg });
     }
 
     const { firstName, lastName, email, password } = req.body;
     try {
       let user = await User.findOne({ email });
       if (user) {
-        return res.status(400).json({ message: 'User already exists' });
+        return res.status(400).json({ success: false, message: 'User already exists' });
       }
       const salt = await bcrypt.genSalt(10);
       const hashedPassword = await bcrypt.hash(password, salt);
@@ -40,10 +41,10 @@ router.post(
       await user.save();
       const payload = { id: user._id };
       const token = jwt.sign(payload, process.env.JWT_SECRET, { expiresIn: '1h' });
-      res.status(201).json({ token });
+      res.status(201).json({ success: true, token });
     } catch (error) {
       console.error('Register error:', error.message, error.stack);
-      res.status(500).json({ message: 'Failed to register user' });
+      res.status(500).json({ success: false, message: 'Failed to register user' });
     }
   }
 );
@@ -73,10 +74,10 @@ router.post(
       }
       const payload = { id: user._id };
       const token = jwt.sign(payload, process.env.JWT_SECRET, { expiresIn: '1h' });
-      res.status(200).json({ token });
+      res.status(200).json({ success: true, token });
     } catch (error) {
       console.error('Login error:', error.message, error.stack);
-      res.status(500).json({ message: 'Failed to login' });
+      res.status(500).json({ success: false, message: 'Failed to login' });
     }
   }
 );
@@ -109,11 +110,47 @@ router.get('/profile', authMiddleware, async (req, res) => {
 // Orders GET
 router.get('/orders', authMiddleware, async (req, res) => {
   try {
-    const user = await User.findById(req.user.id).populate('orders.items.bookId');
+    const user = await User.findById(req.user.id);
     if (!user) {
       return res.status(404).json({ message: 'User not found' });
     }
-    res.json(user.orders);
+    // Fetch book details for orders
+    const bookSlugs = new Set();
+    user.orders.forEach((order) => {
+      order.items.forEach((item) => bookSlugs.add(item.bookSlug));
+    });
+    const books = await Book.find({ slug: { $in: Array.from(bookSlugs) } }).lean();
+    const bookMap = new Map(books.map((book) => [book.slug, book]));
+
+    const ordersWithDetails = user.orders.map((order) => {
+      const orderObj = order.toObject();
+      orderObj.items = orderObj.items.map((item) => {
+        const book = bookMap.get(item.bookSlug);
+        return {
+          ...item,
+          book: book
+            ? {
+                _id: book._id,
+                title: book.title,
+                author: book.author,
+                price: book.price,
+                slug: book.slug,
+                urlPath: book.urlPath,
+              }
+            : {
+                slug: item.bookSlug,
+                title: 'Book unavailable',
+                author: 'N/A',
+                price: item.price,
+                _id: null,
+                urlPath: '/placeholder.svg',
+              },
+        };
+      });
+      return orderObj;
+    });
+
+    res.json(ordersWithDetails);
   } catch (error) {
     console.error('Orders fetch error:', error.message, error.stack);
     res.status(500).json({ message: 'Failed to fetch orders' });
@@ -172,25 +209,26 @@ router.put(
 
 // Wishlist POST
 router.post('/wishlist', authMiddleware, async (req, res) => {
-  const { bookId } = req.body;
+  const { bookSlug } = req.body;
   try {
-    if (!mongoose.Types.ObjectId.isValid(bookId)) {
-      return res.status(400).json({ message: 'Invalid book ID' });
-    }
-    const user = await User.findById(req.user.id);
-    if (!user) {
-      return res.status(404).json({ message: 'User not found' });
-    }
-    if (user.wishlist.includes(bookId)) {
-      return res.status(400).json({ message: 'Book already in wishlist' });
-    }
-    user.wishlist.push(bookId);
-    await user.save();
-    const populatedUser = await User.findById(req.user.id).populate('wishlist');
-    res.status(200).json({ message: 'Book added to wishlist', wishlist: populatedUser.wishlist });
+      const book = await Book.findOne({ slug: bookSlug });
+      if (!book) {
+          return res.status(404).json({ message: 'Book not found' });
+      }
+      const user = await User.findById(req.user.id);
+      if (!user) {
+          return res.status(404).json({ message: 'User not found' });
+      }
+      if (user.wishlist.includes(book._id)) {
+          return res.status(400).json({ message: 'Book already in wishlist' });
+      }
+      user.wishlist.push(book._id);
+      await user.save();
+      const populatedUser = await User.findById(req.user.id).populate('wishlist');
+      res.status(200).json({ message: 'Book added to wishlist', wishlist: populatedUser.wishlist });
   } catch (error) {
-    console.error('Wishlist add error:', error.message, error.stack);
-    res.status(500).json({ message: 'Failed to add to wishlist' });
+      console.error('Wishlist add error:', error.message, error.stack);
+      res.status(500).json({ message: 'Failed to add to wishlist' });
   }
 });
 
@@ -209,18 +247,19 @@ router.get('/wishlist', authMiddleware, async (req, res) => {
 });
 
 // Wishlist DELETE
-router.delete('/wishlist/:bookId', authMiddleware, async (req, res) => {
-  const { bookId } = req.params;
+router.delete('/wishlist/:bookSlug', authMiddleware, async (req, res) => {
+  const { bookSlug } = req.params;
   try {
-    if (!mongoose.Types.ObjectId.isValid(bookId)) {
-      return res.status(400).json({ message: 'Invalid book ID' });
+    const book = await Book.findOne({ slug: bookSlug });
+    if (!book) {
+      return res.status(404).json({ message: 'Book not found' });
     }
     const user = await User.findById(req.user.id);
     if (!user) {
       return res.status(404).json({ message: 'User not found' });
     }
     const initialLength = user.wishlist.length;
-    user.wishlist = user.wishlist.filter((id) => id.toString() !== bookId);
+    user.wishlist = user.wishlist.filter((id) => id.toString() !== book._id.toString());
     if (user.wishlist.length === initialLength) {
       return res.status(400).json({ message: 'Book not found in wishlist' });
     }

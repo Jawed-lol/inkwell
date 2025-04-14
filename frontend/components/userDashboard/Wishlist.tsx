@@ -2,7 +2,7 @@
 
 import { useAuth } from "@/context/AuthContext"
 import { useState, useEffect, useCallback } from "react"
-import { getWishlist, removeFromWishlist } from "@/lib/api"
+import { wishlistService } from "@/lib/api"
 import { Trash2, ShoppingCart } from "lucide-react"
 import Image from "next/image"
 import Head from "next/head"
@@ -12,7 +12,7 @@ import Link from "next/link"
 interface Book {
     slug: string
     title: string
-    author: string
+    author: { name: string; _id: string }
     price: number
     urlPath?: string
 }
@@ -26,12 +26,12 @@ export default function Wishlist() {
         if (!token) return
 
         try {
-            const data = await getWishlist(token)
+            const data = await wishlistService.get(token)
             setWishlist(
                 Array.isArray(data)
                     ? data
-                    : Array.isArray(data.data)
-                      ? data.data
+                    : Array.isArray(data.wishlist)
+                      ? data.wishlist
                       : []
             )
             setError(null)
@@ -51,7 +51,7 @@ export default function Wishlist() {
         if (!token) return
 
         try {
-            await removeFromWishlist(token, bookId)
+            await wishlistService.remove(token, bookId)
             setWishlist(wishlist.filter((book) => book.slug !== bookId))
         } catch {
             setError("Failed to remove item. Please try again.")
@@ -204,7 +204,8 @@ export default function Wishlist() {
                                         {book.title}
                                     </h2>
                                     <p className='text-mutedSand'>
-                                        by {book.author || "Unknown Author"}
+                                        by{" "}
+                                        {book.author.name || "Unknown Author"}
                                     </p>
                                     <p className='text-warmBeige font-bold'>
                                         ${book.price.toFixed(2)}

@@ -6,7 +6,7 @@ import { useCart } from "@/context/CartContext"
 import { XIcon } from "lucide-react"
 import Link from "next/link"
 import { useEffect, useState } from "react"
-import { NextSeo } from "next-seo"
+import Head from "next/head"
 import dynamic from "next/dynamic"
 
 declare global {
@@ -88,25 +88,29 @@ function CartPage() {
 
     return (
         <>
-            <NextSeo
-                title={`Your Shopping Cart (${itemCount} items) | Bookstore Name`}
-                description='Review and manage your selected books before checkout. Update quantities or proceed to secure checkout.'
-                canonical='https://yourbookstore.com/cart'
-                openGraph={{
-                    title: `Your Shopping Cart (${itemCount} items) | Bookstore Name`,
-                    description:
-                        "Review and manage your selected books before checkout.",
-                    url: "https://yourbookstore.com/cart",
-                    type: "website",
-                }}
-                noindex={true}
-                additionalMetaTags={[
-                    {
-                        name: "structured-data",
-                        content: JSON.stringify(structuredData),
-                    },
-                ]}
-            />
+            <Head>
+                <title>{`Your Shopping Cart (${itemCount} items) | Inkwell Bookstore`}</title>
+                <meta
+                    name="description"
+                    content="Review and manage your selected books before checkout. Update quantities or proceed to secure checkout."
+                />
+                <meta name="robots" content="noindex, follow" />
+                <link rel="canonical" href="https://inkwellbookstore.com/cart" />
+                <meta
+                    property="og:title"
+                    content={`Your Shopping Cart (${itemCount} items) | Inkwell Bookstore`}
+                />
+                <meta
+                    property="og:description"
+                    content="Review and manage your selected books before checkout."
+                />
+                <meta property="og:url" content="https://inkwellbookstore.com/cart" />
+                <meta property="og:type" content="website" />
+                <script
+                    type="application/ld+json"
+                    dangerouslySetInnerHTML={{ __html: JSON.stringify(structuredData) }}
+                />
+            </Head>
 
             <main className='pt-[120px] bg-gradient-to-b from-charcoalBlack to-deepGray min-h-screen'>
                 <div className='max-w-[1200px] mx-auto px-6 sm:px-8 md:px-12 py-8'>
@@ -165,7 +169,7 @@ function CartPage() {
                                                     </h2>
                                                     <p className='font-generalSans text-mutedSand text-sm md:text-base'>
                                                         by{" "}
-                                                        {item.author ||
+                                                        {item.author.name ||
                                                             "Unknown Author"}
                                                     </p>
                                                     <p className='font-generalSans text-burntAmber font-bold text-sm md:text-base'>

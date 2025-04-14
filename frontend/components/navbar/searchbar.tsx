@@ -5,7 +5,7 @@ import { useState, useEffect, useCallback } from "react"
 import { useRouter } from "next/navigation"
 import { useDebounce } from "use-debounce"
 import Image from "next/image"
-import { fetchBooksBySearch } from "@/lib/api"
+import { bookService } from "@/lib/api"
 import { motion, AnimatePresence, easeInOut } from "framer-motion"
 
 interface Book {
@@ -29,12 +29,18 @@ export default function Searchbar() {
             return
         }
         try {
-            const { data } = await fetchBooksBySearch(debouncedQuery)
+            const response = await bookService.search(debouncedQuery)
             setSuggestions(
-                data.map((item: Book) => ({
+                response.data.map((item: { 
+                    slug: string;
+                    title: string;
+                    author: { name: string };
+                    price: number;
+                    urlPath: string;
+                }) => ({
                     slug: item.slug,
                     title: item.title,
-                    author: item.author,
+                    author: item.author.name,
                     price: item.price,
                     urlPath: item.urlPath,
                 }))

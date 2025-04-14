@@ -5,7 +5,6 @@ const { Book } = require('../models/Books');
 const authMiddleware = require('../middleware/auth');
 const { body, validationResult } = require('express-validator');
 
-// Helper function to transform cart items
 const transformCartItems = async (cartItems) => {
   const bookSlugs = cartItems.map((item) => item.slug);
   const books = await Book.find({ slug: { $in: bookSlugs } }).populate('author', 'name');

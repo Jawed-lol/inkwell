@@ -5,7 +5,26 @@ require('dotenv').config();
 
 const app = express();
 
-app.use(cors());
+const allowedOrigins = [
+  'http://localhost:3000', // Development
+  'https://your-production-frontend.com' // Production
+];
+
+// CORS configuration
+app.use(
+  cors({
+    origin: (origin, callback) => {
+      // Allow requests with no origin (e.g., mobile apps or curl)
+      if (!origin) return callback(null, true);
+      if (allowedOrigins.includes(origin)) {
+        callback(null, origin);
+      } else {
+        callback(new Error('Not allowed by CORS'));
+      }
+    },
+    credentials: true, // Allow cookies/credentials
+  })
+);
 app.use(express.json());
 
 if (!process.env.MONGO_URI || !process.env.JWT_SECRET) {

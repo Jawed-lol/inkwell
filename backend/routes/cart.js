@@ -18,7 +18,7 @@ const transformCartItems = async (cartItems) => {
   
   try {
     // Try to find books by slug
-    let books = await Book.find({ slug: { $in: bookSlugs } }).populate('author', 'name');
+    let books = await Book.find({ slug: { $in: bookSlugs } }).populate('author', 'name bio _id');
     console.log('Found books by slug:', books.length, 'for slugs:', bookSlugs);
     
     // If we didn't find all books, try to find the remaining ones by _id
@@ -30,7 +30,7 @@ const transformCartItems = async (cartItems) => {
       const possibleIds = missingSlugs.filter(slug => /^[0-9a-fA-F]{24}$/.test(slug));
       
       if (possibleIds.length > 0) {
-        const additionalBooks = await Book.find({ _id: { $in: possibleIds } }).populate('author', 'name');
+        const additionalBooks = await Book.find({ _id: { $in: possibleIds } }).populate('author', 'name bio _id');
         console.log('Found additional books by _id:', additionalBooks.length);
         books = [...books, ...additionalBooks];
       }
@@ -54,24 +54,39 @@ const transformCartItems = async (cartItems) => {
       
       if (!book) {
         console.warn('Book not found for slug:', item.slug);
-        // Return a placeholder item
+        // Return a placeholder item with author as object
         return {
           _id: item.slug,
           slug: item.slug,
           title: 'Unknown Book',
           price: 0,
           urlPath: '/placeholder.svg',
-          author: 'Unknown Author',
+          author: {
+            name: 'Unknown Author',
+            _id: '',
+            bio: ''
+          },
           quantity: item.quantity
         };
       }
       
-      // Extract author name correctly
-      let authorName = 'Unknown Author';
-      if (typeof book.author === 'string') {
-        authorName = book.author;
-      } else if (book.author && typeof book.author === 'object') {
-        authorName = book.author.name || 'Unknown Author';
+      // Extract author as an object
+      let author = {
+        name: 'Unknown Author',
+        _id: '',
+        bio: ''
+      };
+      
+      if (book.author) {
+        if (typeof book.author === 'string') {
+          author.name = book.author;
+        } else if (typeof book.author === 'object') {
+          author = {
+            name: book.author.name || 'Unknown Author',
+            _id: book.author._id ? book.author._id.toString() : '',
+            bio: book.author.bio || ''
+          };
+        }
       }
       
       return {
@@ -80,7 +95,7 @@ const transformCartItems = async (cartItems) => {
         title: book.title || 'Unknown Title',
         price: book.price || 0,
         urlPath: book.urlPath || '/placeholder.svg',
-        author: authorName,
+        author: author,
         quantity: item.quantity
       };
     }).filter(item => item !== null);
@@ -89,7 +104,7 @@ const transformCartItems = async (cartItems) => {
     return transformedItems;
   } catch (error) {
     console.error('Error transforming cart items:', error);
-    // Return the original items with placeholder data
+    // Return the original items with placeholder data and author as object
     return cartItems.map(item => ({
       _id: item.slug,
       slug: item.slug,
@@ -97,7 +112,11 @@ const transformCartItems = async (cartItems) => {
       title: "Unknown Book",
       price: 0,
       urlPath: "/placeholder.svg",
-      author: "Unknown Author"
+      author: {
+        name: "Unknown Author",
+        _id: "",
+        bio: ""
+      }
     }));
   }
 };
@@ -110,6 +129,7 @@ router.get('/', authMiddleware, async (req, res) => {
     }
 
     const validCartItems = await transformCartItems(user.cart);
+    
     res.json({ items: validCartItems });
   } catch (error) {
     console.error('Get cart error:', error.message, error.stack);
@@ -179,7 +199,11 @@ router.put(
                       title: "Unknown Book", // Placeholder
                       price: 0,
                       urlPath: "/placeholder.svg",
-                      author: "Unknown Author",
+                      author: {
+                          name: "Unknown Author",
+                          _id: "",
+                          bio: ""
+                      },
                       _id: item.slug // Include _id to match frontend expectations
                   }))
               });

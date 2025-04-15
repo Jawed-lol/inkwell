@@ -8,7 +8,7 @@ export interface BookReview {
 export interface Author {
     name: string
     _id: string
-    author_bio: string
+    bio: string
 }
 
 export interface Book {

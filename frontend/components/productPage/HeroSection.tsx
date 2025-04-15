@@ -17,7 +17,7 @@ import { useState } from "react"
 import Head from "next/head"
 
 interface BookProps {
-    slug: string // Changed from _id to slug
+    slug: string 
     urlPath: string
     title: string
     author: string

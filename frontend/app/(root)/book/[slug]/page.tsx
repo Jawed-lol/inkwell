@@ -10,13 +10,12 @@ import BookDetailsSectionProduct from "@/components/productPage/BookDetailsSecti
 import RelatedBook from "@/components/productPage/RelatedBook"
 import { bookService } from "@/lib/api"
 import { useCart } from "@/context/CartContext"
-import { Book } from "@/types/book"
-
+import {Book} from "@/types/book"
 
 
 export default function BookPage() {
     const params = useParams()
-    const bookSlug = params.slug as string
+    const bookSlug = params.slug as string 
     const { addToCart } = useCart()
 
     const [book, setBook] = useState<Book | null>(null)
@@ -28,22 +27,28 @@ export default function BookPage() {
         const getBookDetails = async () => {
             try {
                 setLoading(true)
-                const bookResponse = await bookService.fetchBySlug(bookSlug)
-                if (!bookResponse.success || !bookResponse.data) {
-                    throw new Error("Book not found")
-                }
-                setBook(bookResponse.data as Book)
-
-                const booksResponse = await bookService.fetchBooks(1, 12)
-                if (!booksResponse.success || !Array.isArray(booksResponse.data)) {
-                    throw new Error("Failed to load related books")
+                const bookData = await bookService.fetchBySlug(bookSlug)
+                
+                // Ensure the author data is correctly structured
+                const bookWithAuthor = bookData.data as Book;
+                
+                // If author is a string, convert it to the expected object structure
+                if (typeof bookWithAuthor.author === 'string') {
+                    bookWithAuthor.author = {
+                        name: bookWithAuthor.author as unknown as string,
+                        _id: (bookWithAuthor as { author_id?: string }).author_id || '',
+                        bio: (bookWithAuthor as { author_bio?: string }).author_bio || ''
+                    };
                 }
                 
-                const filteredRelatedBooks = booksResponse.data
+                setBook(bookWithAuthor)
+
+                const allBooks = await bookService.fetchBooks()
+                const filteredRelatedBooks = (allBooks.data as Book[])
                     .filter(
                         (b) =>
                             b.slug !== bookSlug &&
-                            b.genre === bookResponse.data.genre
+                            b.genre === (bookData.data as Book).genre
                     )
                     .slice(0, 4)
 
@@ -81,14 +86,15 @@ export default function BookPage() {
     }
 
     const bookDetails = {
-        synopsis: book.description,
-        aboutAuthor:
-            book.author.author_bio || "Information about the author not available.",
+        synopsis: book.synopsis,
+        aboutAuthor: book.author.bio || "Information about the author not available.",
         publisher: book.publisher || "Unknown publisher",
         language: book.language || "English",
         pages_number: book.pages_number,
         isbn: book.isbn || "Not available",
     }
+    
+    
 
     const avgRating =
         book.reviews && book.reviews.length > 0
@@ -115,15 +121,15 @@ export default function BookPage() {
                 />
                 <meta
                     name='description'
-                    content={`${book.description.slice(0, 150)}... Buy ${book.title} by ${book.author} at Inkwell Bookstore.`}
+                    content={`${book.description.slice(0, 150)}... Buy ${book.title} by ${typeof book.author === 'string' ? book.author : book.author.name} at Inkwell Bookstore.`}
                 />
                 <meta
                     name='keywords'
-                    content={`${book.title}, ${book.author}, ${book.genre}, bookstore, books, reading, literature`}
+                    content={`${book.title}, ${typeof book.author === 'string' ? book.author : book.author.name}, ${book.genre}, bookstore, books, reading, literature`}
                 />
                 <meta
                     name='author'
-                    content={book.author.name}
+                    content={typeof book.author === 'string' ? book.author : book.author.name}
                 />
                 <meta
                     property='og:title'

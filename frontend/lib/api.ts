@@ -3,7 +3,7 @@ import { Book } from "@/types/book"
 
 const BASE_URL = `${process.env.NEXT_PUBLIC_API_URL}/api`
 
-// Types
+
 
 
 interface UserProfile {
@@ -51,10 +51,11 @@ interface BooksResponse {
     currentPage: number
 }
 
-interface BookResponse { 
-    success: boolean
-    message?: string
-    data: Book 
+// In the BookResponse interface, ensure it matches your Book type
+interface BookResponse {
+  success: boolean
+  message?: string
+  data: Book
 }
 
 interface OrderResponse { 

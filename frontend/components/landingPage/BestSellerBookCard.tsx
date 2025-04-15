@@ -7,7 +7,10 @@ import { useRouter } from "next/navigation"
 import { useCart } from "@/context/CartContext"
 import { Book } from "@/types/book"
 
-type BestSellerBookCardProps = Book;
+// Extend the Book type to allow for string author
+type BestSellerBookCardProps = Omit<Book, 'author'> & {
+    author: { name: string;  bio: string; _id: string };
+};
 
 const BestSellerBookCard = ({
     _id,
@@ -66,6 +69,7 @@ const BestSellerBookCard = ({
         ? (reviews.reduce((sum, review) => sum + review.rating, 0) / reviews.length).toFixed(1)
         : rating?.toFixed(1) || "N/A"
 
+    // Get author name safely regardless of author type
     return (
         <article 
             className="flex w-full bg-[#252525] rounded-xl p-4 md:p-6 lg:p-8 items-start gap-4 hover:scale-[1.03] transition duration-300 ease-in-out shadow-[0px_4px_10px_rgba(0,0,0,0.2)] hover:shadow-[0px_6px_15px_rgba(0,0,0,0.3)] cursor-pointer"
@@ -75,7 +79,9 @@ const BestSellerBookCard = ({
             <div className="w-[35%] flex-shrink-0">
                 <Image
                     src={urlPath || "/images/fallback.jpg"}
-                    alt={`Cover of ${title} by ${author}`}
+                    alt={`Cover of ${title} by ${author
+                        
+                    }`}
                     width={180}
                     height={250}
                     className="w-full h-auto rounded-[8px] object-cover object-center shadow-[0px_4px_12px_rgba(0,0,0,0.3)] hover:scale-[1.03] transition duration-300 ease-in-out"

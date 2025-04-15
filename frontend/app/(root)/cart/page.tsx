@@ -6,8 +6,11 @@ import { useCart } from "@/context/CartContext"
 import { XIcon } from "lucide-react"
 import Link from "next/link"
 import { useEffect, useState } from "react"
-import Head from "next/head"
 import dynamic from "next/dynamic"
+import Head from "next/head"
+
+// Define types for cart items
+
 
 declare global {
     interface Window {
@@ -21,6 +24,7 @@ function CartPage() {
 
     useEffect(() => {
         setIsClient(true)
+        // Track page view with Google Analytics
         if (typeof window !== "undefined" && window.gtag) {
             window.gtag("event", "page_view", {
                 page_title: "Shopping Cart",
@@ -31,12 +35,20 @@ function CartPage() {
 
     const handleIncreaseQuantity = (bookId: string) => {
         const item = cart.find((i) => i.slug === bookId)
-        if (item) updateQuantity(bookId, item.quantity + 1)
+        if (item) {
+            updateQuantity(bookId, item.quantity + 1)
+        }
     }
 
     const handleDecreaseQuantity = (bookId: string) => {
         const item = cart.find((i) => i.slug === bookId)
-        if (item) updateQuantity(bookId, item.quantity - 1)
+        if (item) {
+            if (item.quantity > 1) {
+                updateQuantity(bookId, item.quantity - 1)
+            } else {
+                removeFromCart(bookId)
+            }
+        }
     }
 
     const total = cart.reduce(
@@ -44,13 +56,13 @@ function CartPage() {
         0
     )
 
-    const itemCount = cart.reduce((count, item) => count + item.quantity, 0)
 
     const fadeIn = {
         hidden: { opacity: 0, y: 20 },
         visible: { opacity: 1, y: 0, transition: { duration: 0.6 } },
     }
-
+    
+    // Generate structured data for SEO
     const generateStructuredData = () => {
         return {
             "@context": "https://schema.org",
@@ -61,7 +73,9 @@ function CartPage() {
                 item: {
                     "@type": "Product",
                     name: item.title || "Unknown Title",
-                    author: item.author || "Unknown Author",
+                    author: typeof item.author === 'string' 
+                        ? item.author 
+                        : (item.author?.name || "Unknown Author"),
                     offers: {
                         "@type": "Offer",
                         price: item.price,
@@ -72,8 +86,29 @@ function CartPage() {
         }
     }
 
-    const structuredData = generateStructuredData()
+    // Generate breadcrumb structured data
+    const generateBreadcrumbData = () => {
+        return {
+            "@context": "https://schema.org",
+            "@type": "BreadcrumbList",
+            itemListElement: [
+                {
+                    "@type": "ListItem",
+                    position: 1,
+                    name: "Home",
+                    item: "https://inkwellbookstore.com"
+                },
+                {
+                    "@type": "ListItem",
+                    position: 2,
+                    name: "Shopping Cart",
+                    item: "https://inkwellbookstore.com/cart"
+                }
+            ]
+        }
+    }
 
+    // Loading state for SSR
     if (!isClient) {
         return (
             <main className='pt-[120px] bg-gradient-to-b from-charcoalBlack to-deepGray min-h-screen'>
@@ -89,30 +124,36 @@ function CartPage() {
     return (
         <>
             <Head>
-                <title>{`Your Shopping Cart (${itemCount} items) | Inkwell Bookstore`}</title>
-                <meta
-                    name="description"
-                    content="Review and manage your selected books before checkout. Update quantities or proceed to secure checkout."
-                />
+                <title>Your Shopping Cart | Inkwell Bookstore</title>
+                <meta name="description" content="Review and manage your selected books before checkout. Update quantities or proceed to secure checkout." />
                 <meta name="robots" content="noindex, follow" />
                 <link rel="canonical" href="https://inkwellbookstore.com/cart" />
-                <meta
-                    property="og:title"
-                    content={`Your Shopping Cart (${itemCount} items) | Inkwell Bookstore`}
-                />
-                <meta
-                    property="og:description"
-                    content="Review and manage your selected books before checkout."
-                />
+                <meta property="og:title" content="Your Shopping Cart | Inkwell Bookstore" />
+                <meta property="og:description" content="Review and manage your selected books before checkout." />
                 <meta property="og:url" content="https://inkwellbookstore.com/cart" />
                 <meta property="og:type" content="website" />
-                <script
-                    type="application/ld+json"
-                    dangerouslySetInnerHTML={{ __html: JSON.stringify(structuredData) }}
-                />
+                <meta name="twitter:card" content="summary" />
+                <meta name="twitter:title" content="Your Shopping Cart | Inkwell Bookstore" />
+                <meta name="twitter:description" content="Review and manage your selected books before checkout." />
             </Head>
 
-            <main className='pt-[120px] bg-gradient-to-b from-charcoalBlack to-deepGray min-h-screen'>
+            {/* Structured data script for SEO */}
+            <script
+                type="application/ld+json"
+                dangerouslySetInnerHTML={{ 
+                    __html: JSON.stringify(generateStructuredData()) 
+                }}
+            />
+            
+            {/* Breadcrumb structured data */}
+            <script
+                type="application/ld+json"
+                dangerouslySetInnerHTML={{ 
+                    __html: JSON.stringify(generateBreadcrumbData()) 
+                }}
+            />
+
+            <main className='pt-[120px] bg-gradient-to-b from-charcoalBlack to-deepGray min-h-screen' aria-label="Shopping Cart Page">
                 <div className='max-w-[1200px] mx-auto px-6 sm:px-8 md:px-12 py-8'>
                     <motion.h1
                         initial='hidden'
@@ -169,8 +210,9 @@ function CartPage() {
                                                     </h2>
                                                     <p className='font-generalSans text-mutedSand text-sm md:text-base'>
                                                         by{" "}
-                                                        {item.author.name ||
-                                                            "Unknown Author"}
+                                                        {typeof item.author === 'string'
+                                                            ? item.author
+                                                            : (item.author?.name || "Unknown Author")}
                                                     </p>
                                                     <p className='font-generalSans text-burntAmber font-bold text-sm md:text-base'>
                                                         $
@@ -193,7 +235,7 @@ function CartPage() {
                                                                 item.slug
                                                             )
                                                         }
-                                                        className='bg-burntAmber text-darkMutedTeal font-generalSans font-bold w-8 h-8 rounded-full hover:bg-deepCopper transition duration-200'
+                                                        className={`bg-burntAmber text-darkMutedTeal font-generalSans font-bold w-8 h-8 rounded-full hover:bg-deepCopper transition duration-200`}
                                                         aria-label={`Decrease quantity of ${item.title}`}>
                                                         -
                                                     </button>
@@ -261,4 +303,7 @@ function CartPage() {
     )
 }
 
+// Remove the generateMetadata export
+
+// Use dynamic import with no SSR for cart functionality
 export default dynamic(() => Promise.resolve(CartPage), { ssr: false })

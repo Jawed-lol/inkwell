@@ -85,6 +85,7 @@ export const CartProvider = ({ children }: { children: ReactNode }) => {
 
                 const data = (await response.json()) as CartApiResponse
                 
+                
                 if (!data.items || !Array.isArray(data.items) || data.items.length === 0) {
                     return
                 }

@@ -12,7 +12,7 @@ const bookSchema = Joi.object({
     Joi.string().hex().length(24), // Author ID
     Joi.object({
       name: Joi.string().required(),
-      about: Joi.string().required(),
+      bio: Joi.string().required(),
     })
   ).required(),
   description: Joi.string().required(),
@@ -50,13 +50,16 @@ router.get('/search', async (req, res) => {
         { author: { $in: authorIds } },
       ],
     })
-      .populate('author', 'name about')
+      .populate('author', 'name about _id')
       .lean();
 
     const formattedBooks = books.map((book) => ({
       ...book,
-      author: book.author.name,
-      author_bio: book.author.about || '',
+      author: {
+        name: book.author.name,
+        _id: book.author._id,
+        bio: book.author.about || ''
+      },
       slug: book.slug,
       rating: book.reviews.length > 0 ? Math.round(book.reviews.reduce((sum, r) => sum + r.rating, 0) / book.reviews.length * 10) / 10 : 0,
     }));
@@ -78,15 +81,19 @@ router.get('/random', async (req, res) => {
           from: 'authors',
           localField: 'author',
           foreignField: '_id',
-          as: 'author',
+          as: 'authorData'
         },
       },
-      { $unwind: '$author' },
+      { $unwind: '$authorData' },
       {
         $project: {
           slug: 1,
           title: 1,
-          author: '$author.name',
+          author: {
+            name: '$authorData.name',
+            _id: '$authorData._id',
+            bio: { $ifNull: ['$authorData.about', ''] }
+          },
           rating: {
             $cond: {
               if: { $gt: [{ $size: '$reviews' }, 0] },
@@ -116,13 +123,16 @@ router.get('/', async (req, res) => {
     const books = await Book.find()
       .skip(skip)
       .limit(limit)
-      .populate('author', 'name about')
+      .populate('author', 'name about _id')
       .lean();
 
     const formattedBooks = books.map((book) => ({
       ...book,
-      author: book.author.name,
-      author_bio: book.author.about || '',
+      author: {
+        name: book.author.name,
+        _id: book.author._id,
+        bio: book.author.about || ''
+      },
       slug: book.slug,
       rating: book.reviews.length > 0 ? Math.round(book.reviews.reduce((sum, r) => sum + r.rating, 0) / book.reviews.length * 10) / 10 : 0,
     }));
@@ -144,18 +154,19 @@ router.get('/', async (req, res) => {
 router.get('/:slug', async (req, res) => {
   try {
     const book = await Book.findOne({ slug: req.params.slug })
-      .populate('author', 'name about')
+      .populate('author', 'name bio _id') // Changed from 'about' to 'bio'
       .lean();
-    if (!book) {
-      return res.status(404).json({ success: false, message: 'Book not found' });
-    }
+
+    // And update the formatted book response:
     const formattedBook = {
       ...book,
-      author: book.author.name,
-      author_bio: book.author.about || '',
-      slug: book.slug,
-      rating: book.reviews.length > 0 ? Math.round(book.reviews.reduce((sum, r) => sum + r.rating, 0) / book.reviews.length * 10) / 10 : 0,
+      author: {
+        name: book.author.name,
+        _id: book.author._id,
+        bio: book.author.bio || '' // Use bio instead of about
+      }
     };
+
     res.status(200).json({ success: true, data: formattedBook });
   } catch (error) {
     console.error('Book fetch error:', error.message, error.stack);
@@ -190,7 +201,7 @@ router.post('/', async (req, res) => {
       } else {
         const newAuthor = new Author({
           name: authorData.name,
-          about: authorData.about,
+          bio: authorData.bio,
         });
         await newAuthor.save();
         authorId = newAuthor._id;

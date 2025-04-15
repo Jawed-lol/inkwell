@@ -14,6 +14,7 @@ interface AuthContextType {
     user: { name: string; email: string } | null
     token: string | null
     loading: boolean
+    isAuthenticated: boolean
     login: (token: string) => void
     logout: () => void
 }
@@ -87,7 +88,14 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
     )
 
     return (
-        <AuthContext.Provider value={{ user, token, loading, login, logout }}>
+        <AuthContext.Provider value={{ 
+            user, 
+            token, 
+            loading, 
+            isAuthenticated: !!token, 
+            login, 
+            logout 
+        }}>
             {children}
         </AuthContext.Provider>
     )

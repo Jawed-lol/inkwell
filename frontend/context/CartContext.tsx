@@ -177,8 +177,24 @@ export const CartProvider = ({ children }: { children: ReactNode }) => {
                     headers: { Authorization: `Bearer ${token}` },
                 })
                 
+                // Remove this console.log in production
+                
                 if (!response.ok) {
-                    throw new Error("Failed to load cart from backend")
+                    // If we get a 404, the endpoint might not be set up yet
+                    if (response.status === 404) {
+                        console.warn("Cart API endpoint not found. Using local cart instead.");
+                        // Use local cart if backend endpoint is not available
+                        if (localCart.length > 0) {
+                            setCart(localCart);
+                        }
+                    } else if (response.status === 401 || response.status === 403) {
+                        console.warn("Authentication error when accessing cart. Using local cart instead.");
+                        // Use local cart if authentication fails
+                        if (localCart.length > 0) {
+                            setCart(localCart);
+                        }
+                    }
+                    throw new Error(`Failed to load cart from backend: ${response.status}`);
                 }
                 
                 const data = await response.json() as CartApiResponse

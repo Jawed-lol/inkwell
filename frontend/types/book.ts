@@ -1,9 +1,12 @@
 export interface BookReview {
+    _id: string
     user_id: string
     rating: number
     comment?: string
     created_at: string
+    userName?: string  // Add this field to store the user's name
 }
+
 
 export interface Author {
     name: string

@@ -5,13 +5,12 @@ import { useParams } from "next/navigation"
 import { motion } from "framer-motion"
 import Head from "next/head"
 import HeroSectionProduct from "@/components/productPage/HeroSection"
-import ReviewProduct from "@/components/productPage/ReviewProduct"
+import ReviewProduct, { AddReview } from "@/components/productPage/ReviewProduct"
 import BookDetailsSectionProduct from "@/components/productPage/BookDetailsSection"
 import RelatedBook from "@/components/productPage/RelatedBook"
 import { bookService } from "@/lib/api"
 import { useCart } from "@/context/CartContext"
-import {Book} from "@/types/book"
-
+import { Book } from "@/types/book"
 
 export default function BookPage() {
     const params = useParams()
@@ -23,44 +22,44 @@ export default function BookPage() {
     const [loading, setLoading] = useState(true)
     const [error, setError] = useState("")
 
-    useEffect(() => {
-        const getBookDetails = async () => {
-            try {
-                setLoading(true)
-                const bookData = await bookService.fetchBySlug(bookSlug)
-                
-                // Ensure the author data is correctly structured
-                const bookWithAuthor = bookData.data as Book;
-                
-                // If author is a string, convert it to the expected object structure
-                if (typeof bookWithAuthor.author === 'string') {
-                    bookWithAuthor.author = {
-                        name: bookWithAuthor.author as unknown as string,
-                        _id: (bookWithAuthor as { author_id?: string }).author_id || '',
-                        bio: (bookWithAuthor as { author_bio?: string }).author_bio || ''
-                    };
-                }
-                
-                setBook(bookWithAuthor)
-
-                const allBooks = await bookService.fetchBooks()
-                const filteredRelatedBooks = (allBooks.data as Book[])
-                    .filter(
-                        (b) =>
-                            b.slug !== bookSlug &&
-                            b.genre === (bookData.data as Book).genre
-                    )
-                    .slice(0, 4)
-
-                setRelatedBooks(filteredRelatedBooks)
-            } catch (err) {
-                console.error("Failed to load book details:", err)
-                setError("Failed to load book details. Please try again later.")
-            } finally {
-                setLoading(false)
+    // Remove extra whitespace
+    const getBookDetails = async () => {
+        try {
+            setLoading(true)
+            const bookData = await bookService.fetchBySlug(bookSlug)
+            
+            const bookWithAuthor = bookData.data as Book;
+            
+            if (typeof bookWithAuthor.author === 'string') {
+                bookWithAuthor.author = {
+                    name: bookWithAuthor.author as unknown as string,
+                    _id: (bookWithAuthor as { author_id?: string }).author_id || '',
+                    bio: (bookWithAuthor as { author_bio?: string }).author_bio || ''
+                };
             }
-        }
+            
+            setBook(bookWithAuthor)
 
+            // Fetch related books by genre
+            const allBooks = await bookService.fetchBooks()
+            const filteredRelatedBooks = (allBooks.data as Book[])
+                .filter(
+                    (b) =>
+                        b.slug !== bookSlug &&
+                        b.genre === (bookData.data as Book).genre
+                )
+                .slice(0, 4)
+
+            setRelatedBooks(filteredRelatedBooks)
+        } catch (err) {
+            console.error("Failed to load book details:", err)
+            setError("Failed to load book details. Please try again later.")
+        } finally {
+            setLoading(false)
+        }
+    }
+
+    useEffect(() => {
         if (bookSlug) getBookDetails()
     }, [bookSlug])
 
@@ -93,8 +92,6 @@ export default function BookPage() {
         pages_number: book.pages_number,
         isbn: book.isbn || "Not available",
     }
-    
-    
 
     const avgRating =
         book.reviews && book.reviews.length > 0
@@ -107,88 +104,99 @@ export default function BookPage() {
         alert(`${book.title} added to cart!`)
     }
 
+    const handleReviewAdded = async () => {
+        try {
+            const bookData = await bookService.fetchBySlug(bookSlug)
+            
+            const bookWithAuthor = bookData.data as Book;
+            
+            if (typeof bookWithAuthor.author === 'string') {
+                bookWithAuthor.author = {
+                    name: bookWithAuthor.author as unknown as string,
+                    _id: (bookWithAuthor as { author_id?: string }).author_id || '',
+                    bio: (bookWithAuthor as { author_bio?: string }).author_bio || ''
+                };
+            }
+            
+            setBook(bookWithAuthor)
+        } catch (err) {
+            console.error("Failed to refresh book details:", err)
+        }
+    }
+    
+    // Prepare SEO metadata
+    const bookTitle = `${book.title} by ${typeof book.author === 'string' ? book.author : book.author.name}`;
+    const bookDescription = book.description.slice(0, 150) + "...";
+    const authorName = typeof book.author === 'string' ? book.author : book.author.name;
+    const canonicalUrl = `https://www.inkwellbookstore.com/books/${bookSlug}`;
+    const keywords = `${book.title}, ${authorName}, ${book.genre}, bookstore, books, reading, literature`;
+    
     return (
         <>
             <Head>
                 <meta charSet='UTF-8' />
-                <meta
-                    name='viewport'
-                    content='width=device-width, initial-scale=1'
-                />
-                <meta
-                    name='robots'
-                    content='index, follow'
-                />
-                <meta
-                    name='description'
-                    content={`${book.description.slice(0, 150)}... Buy ${book.title} by ${typeof book.author === 'string' ? book.author : book.author.name} at Inkwell Bookstore.`}
-                />
-                <meta
-                    name='keywords'
-                    content={`${book.title}, ${typeof book.author === 'string' ? book.author : book.author.name}, ${book.genre}, bookstore, books, reading, literature`}
-                />
-                <meta
-                    name='author'
-                    content={typeof book.author === 'string' ? book.author : book.author.name}
-                />
-                <meta
-                    property='og:title'
-                    content={`${book.title} by ${book.author} - Inkwell Bookstore`}
-                />
-                <meta
-                    property='og:description'
-                    content={`${book.description.slice(0, 150)}... Buy ${book.title} by ${book.author} at Inkwell Bookstore.`}
-                />
-                <meta
-                    property='og:type'
-                    content='product'
-                />
-                <meta
-                    property='og:url'
-                    content={`https://www.inkwellbookstore.com/books/${bookSlug}`} // Changed from book to books
-                />
-                <meta
-                    property='og:image'
-                    content={book.urlPath}
-                />
-                <meta
-                    property='og:price:amount'
-                    content={book.price.toString()}
-                />
-                <meta
-                    property='og:price:currency'
-                    content='USD'
-                />
-                <meta
-                    name='twitter:card'
-                    content='summary_large_image'
-                />
-                <meta
-                    name='twitter:title'
-                    content={`${book.title} by ${book.author}`}
-                />
-                <meta
-                    name='twitter:description'
-                    content={`${book.description.slice(0, 150)}...`}
-                />
-                <meta
-                    name='twitter:image'
-                    content={book.urlPath}
-                />
-                <link
-                    rel='canonical'
-                    href={`https://www.inkwellbookstore.com/books/${bookSlug}`} // Changed from book to books
-                />
-                <link
-                    rel='icon'
-                    href='/favicon.ico'
-                />
-                <title>{`${book.title} by ${book.author} - Inkwell Bookstore`}</title>
+                <meta name='viewport' content='width=device-width, initial-scale=1' />
+                <meta name='robots' content='index, follow' />
+                <meta name='description' content={`${bookDescription} Buy ${book.title} by ${authorName} at Inkwell Bookstore.`} />
+                <meta name='keywords' content={keywords} />
+                <meta name='author' content={authorName} />
+                
+                {/* Open Graph tags for social sharing */}
+                <meta property='og:title' content={`${bookTitle} - Inkwell Bookstore`} />
+                <meta property='og:description' content={`${bookDescription} Buy ${book.title} by ${authorName} at Inkwell Bookstore.`} />
+                <meta property='og:type' content='product' />
+                <meta property='og:url' content={canonicalUrl} />
+                <meta property='og:image' content={book.urlPath} />
+                <meta property='og:price:amount' content={book.price.toString()} />
+                <meta property='og:price:currency' content='USD' />
+                
+                {/* Twitter Card tags */}
+                <meta name='twitter:card' content='summary_large_image' />
+                <meta name='twitter:title' content={bookTitle} />
+                <meta name='twitter:description' content={bookDescription} />
+                <meta name='twitter:image' content={book.urlPath} />
+                
+                {/* Canonical URL to prevent duplicate content issues */}
+                <link rel='canonical' href={canonicalUrl} />
+                <link rel='icon' href='/favicon.ico' />
+                
+                {/* Structured data for rich snippets */}
+                <script type="application/ld+json">
+                    {JSON.stringify({
+                        "@context": "https://schema.org",
+                        "@type": "Book",
+                        "name": book.title,
+                        "author": {
+                            "@type": "Person",
+                            "name": authorName
+                        },
+                        "isbn": book.isbn,
+                        "numberOfPages": book.pages_number,
+                        "publisher": book.publisher,
+                        "inLanguage": book.language,
+                        "genre": book.genre,
+                        "description": book.description,
+                        "image": book.urlPath,
+                        "offers": {
+                            "@type": "Offer",
+                            "price": book.price,
+                            "priceCurrency": "USD",
+                            "availability": book.stock > 0 ? "https://schema.org/InStock" : "https://schema.org/OutOfStock"
+                        },
+                        "aggregateRating": book.reviews && book.reviews.length > 0 ? {
+                            "@type": "AggregateRating",
+                            "ratingValue": avgRating.toFixed(1),
+                            "reviewCount": book.reviews.length
+                        } : undefined
+                    })}
+                </script>
+                
+                <title>{`${bookTitle} - Inkwell Bookstore`}</title>
             </Head>
 
             <main className='bg-charcoalBlack min-h-screen'>
                 <HeroSectionProduct
-                    slug={book.slug} // Changed from _id
+                    slug={book.slug}
                     title={book.title}
                     author={book.author.name}
                     reviews_number={book.reviews?.length || 0}
@@ -212,13 +220,21 @@ export default function BookPage() {
                         <h2 className='font-author text-warmBeige text-3xl mb-8'>
                             Reader Reviews
                         </h2>
+                        
+                        <div className="mb-12">
+                            <AddReview 
+                                productId={book._id} 
+                                onReviewAdded={handleReviewAdded} 
+                            />
+                        </div>
+                        
                         {book.reviews && book.reviews.length > 0 ? (
                             <div className='grid md:grid-cols-2 lg:grid-cols-3 gap-6'>
                                 {book.reviews.map((review) => (
                                     <ReviewProduct
-                                        key={`${review.user_id}-${review.created_at}`} // Removed _id
-                                        id={`${review.user_id}-${review.created_at}`} // Fallback ID
-                                        author={review.user_id}
+                                        key={review._id}
+                                        id={review._id}
+                                        user={review.userName || "User"}
                                         rating={review.rating}
                                         text={review.comment || ""}
                                         date={new Date(
@@ -226,6 +242,7 @@ export default function BookPage() {
                                         ).toLocaleDateString("en-US", {
                                             year: "numeric",
                                             month: "long",
+                                            day: "numeric"
                                         })}
                                     />
                                 ))}
@@ -251,8 +268,8 @@ export default function BookPage() {
                             <div className='grid sm:grid-cols-2 lg:grid-cols-4 gap-6'>
                                 {relatedBooks.map((relatedBook) => (
                                     <RelatedBook
-                                        key={relatedBook.slug} // Changed from _id
-                                        id={relatedBook.slug} // Changed from _id
+                                        key={relatedBook.slug}
+                                        id={relatedBook.slug}
                                         title={relatedBook.title}
                                         author={relatedBook.author.name}
                                         coverPath={relatedBook.urlPath}

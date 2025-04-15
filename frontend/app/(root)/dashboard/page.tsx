@@ -65,11 +65,12 @@ function DashboardContent() {
 
     useEffect(() => {
         if (activeTab) {
-            const title = `${tabTitles[activeTab]} | Your Account Dashboard`
+            const title = `${tabTitles[activeTab]} | Your Account Dashboard | Inkwell Bookstore`
             setPageTitle(title)
         }
     }, [activeTab])
 
+    // Enhanced structured data with more context
     const generateStructuredData = (): object => {
         return {
             "@context": "https://schema.org",
@@ -79,21 +80,54 @@ function DashboardContent() {
                     "@type": "ListItem",
                     position: 1,
                     name: "Home",
-                    item: "https://yourbookstore.com",
+                    item: "https://inkwellbookstore.com",
                 },
                 {
                     "@type": "ListItem",
                     position: 2,
                     name: "Account Dashboard",
-                    item: "https://yourbookstore.com/dashboard",
+                    item: "https://inkwellbookstore.com/dashboard",
                 },
                 {
                     "@type": "ListItem",
                     position: 3,
                     name: tabTitles[activeTab],
-                    item: `https://yourbookstore.com/dashboard?tab=${activeTab}`,
+                    item: `https://inkwellbookstore.com/dashboard?tab=${activeTab}`,
                 },
             ],
+        }
+    }
+
+    // Generate WebPage structured data for better context
+    const generateWebPageData = (): object => {
+        return {
+            "@context": "https://schema.org",
+            "@type": "WebPage",
+            name: pageTitle,
+            description: tabDescriptions[activeTab],
+            breadcrumb: {
+                "@type": "BreadcrumbList",
+                itemListElement: [
+                    {
+                        "@type": "ListItem",
+                        position: 1,
+                        name: "Home",
+                        item: "https://inkwellbookstore.com",
+                    },
+                    {
+                        "@type": "ListItem",
+                        position: 2,
+                        name: "Account Dashboard",
+                        item: "https://inkwellbookstore.com/dashboard",
+                    },
+                    {
+                        "@type": "ListItem",
+                        position: 3,
+                        name: tabTitles[activeTab],
+                        item: `https://inkwellbookstore.com/dashboard?tab=${activeTab}`,
+                    },
+                ],
+            },
         }
     }
 
@@ -133,12 +167,33 @@ function DashboardContent() {
                 />
                 <link
                     rel='canonical'
-                    href={`https://yourbookstore.com/dashboard?tab=${activeTab}`}
+                    href={`https://inkwellbookstore.com/dashboard?tab=${activeTab}`}
                 />
+                {/* Open Graph tags for social sharing */}
+                <meta property="og:title" content={pageTitle} />
+                <meta property="og:description" content={tabDescriptions[activeTab]} />
+                <meta property="og:type" content="website" />
+                <meta property="og:url" content={`https://inkwellbookstore.com/dashboard?tab=${activeTab}`} />
+                <meta property="og:site_name" content="Inkwell Bookstore" />
+                
+                {/* Twitter Card data */}
+                <meta name="twitter:card" content="summary" />
+                <meta name="twitter:title" content={pageTitle} />
+                <meta name="twitter:description" content={tabDescriptions[activeTab]} />
+                
+                {/* Structured data for breadcrumbs */}
                 <script
                     type='application/ld+json'
                     dangerouslySetInnerHTML={{
                         __html: JSON.stringify(generateStructuredData()),
+                    }}
+                />
+                
+                {/* Structured data for webpage */}
+                <script
+                    type='application/ld+json'
+                    dangerouslySetInnerHTML={{
+                        __html: JSON.stringify(generateWebPageData()),
                     }}
                 />
             </Head>
@@ -188,7 +243,7 @@ function DashboardContent() {
                     className='flex-1 p-4 sm:p-6 md:p-8 w-full'
                     id={`dashboard-${activeTab}`}
                     aria-label={tabTitles[activeTab]}>
-                    <h1 className='sr-only'>{tabTitles[activeTab]}</h1>
+                    <h1 className='text-warmBeige text-2xl md:text-3xl font-author mb-6'>{tabTitles[activeTab]}</h1>
 
                     {activeTab === "profile" && <Profile />}
                     {activeTab === "settings" && <Settings />}
@@ -205,7 +260,7 @@ export default function Dashboard() {
         <Suspense
             fallback={
                 <div className='pt-[120px] flex justify-center items-center min-h-screen'>
-                    <p>Loading...</p>
+                    <p className='text-warmBeige'>Loading your dashboard...</p>
                 </div>
             }>
             <DashboardContent />

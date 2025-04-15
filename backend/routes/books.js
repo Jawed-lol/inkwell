@@ -154,16 +154,52 @@ router.get('/', async (req, res) => {
 router.get('/:slug', async (req, res) => {
   try {
     const book = await Book.findOne({ slug: req.params.slug })
-      .populate('author', 'name bio _id') // Changed from 'about' to 'bio'
+      .populate('author', 'name bio _id')
       .lean();
 
-    // And update the formatted book response:
+    if (!book) {
+      return res.status(404).json({ success: false, message: 'Book not found' });
+    }
+
+    // Fetch user information for each review
+    if (book.reviews && book.reviews.length > 0) {
+      try {
+        const User = mongoose.model('User');
+        const userIds = book.reviews.map(review => review.user_id);
+        
+        const users = await User.find({ 
+          _id: { $in: userIds } 
+        }).select('firstName lastName email').lean();
+        
+        // Create a map of user IDs to user names
+        const userMap = {};
+        users.forEach(user => {
+          userMap[user._id.toString()] = user;
+        });
+        
+        // Add user information to each review
+        book.reviews = book.reviews.map(review => {
+          const user = userMap[review.user_id];
+          return {
+            ...review,
+            userName: user ? 
+              `${user.firstName || ''} ${user.lastName || ''}`.trim() || user.email?.split('@')[0] || 'User'
+              : 'User'
+          };
+        });
+      } catch (userError) {
+        console.error('Error fetching user data:', userError);
+        // Continue even if user fetch fails
+      }
+    }
+
+    // Format the book response
     const formattedBook = {
       ...book,
       author: {
         name: book.author.name,
         _id: book.author._id,
-        bio: book.author.bio || '' // Use bio instead of about
+        bio: book.author.bio || ''
       }
     };
 

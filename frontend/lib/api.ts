@@ -140,10 +140,23 @@ export const authService = {
         try {
             const { data } = await apiClient.get("/auth/profile", {
                 headers: getAuthHeaders(token),
-            })
-            return data
+            });
+
+            if (!data.success) {
+                throw new Error(data.message || 'Failed to fetch profile');
+            }
+
+            return {
+                success: true,
+                name: data.name,
+                email: data.email,
+                createdAt: data.createdAt,
+                wishlistItems: data.wishlistItems,
+                orderedItems: data.orderedItems
+            };
         } catch (error) {
-            return handleError(error, "Failed to fetch profile")
+            console.error("Profile request error:", error);
+            throw error; // Re-throw to be caught by the calling component
         }
     },
 }
@@ -257,3 +270,79 @@ export const orderService = {
         }
     },
 }
+
+// Add these functions to your existing api.ts file
+
+// Review service
+export const reviewService = {
+  // Submit a review for a book
+  submitReview: async (bookId: string, rating: number, comment: string) => {
+    try {
+      const token = localStorage.getItem('authToken');
+      if (!token) {
+        throw new Error('Authentication required');
+      }
+
+      const response = await axios.post(
+        `${BASE_URL}/reviews`,
+        { bookId, rating, comment },
+        {
+          headers: {
+            Authorization: `Bearer ${token}`,
+          },
+        }
+      );
+      return response.data;
+    } catch (error) {
+      return handleError(error, "Failed to submit review");
+    }
+  },
+
+  // Get all reviews for a book
+  getBookReviews: async (bookId: string) => {
+    try {
+      const response = await axios.get(`${BASE_URL}/reviews/book/${bookId}`);
+      return response.data;
+    } catch (error) {
+      return handleError(error, "Failed to fetch book reviews");
+    }
+  },
+
+  // Get all reviews by the logged-in user
+  getUserReviews: async () => {
+    try {
+      const token = localStorage.getItem('authToken');
+      if (!token) {
+        throw new Error('Authentication required');
+      }
+
+      const response = await axios.get(`${BASE_URL}/reviews/user`, {
+        headers: {
+          Authorization: `Bearer ${token}`,
+        },
+      });
+      return response.data;
+    } catch (error) {
+      return handleError(error, "Failed to fetch user reviews");
+    }
+  },
+
+  // Delete a review
+  deleteReview: async (bookId: string, reviewId: string) => {
+    try {
+      const token = localStorage.getItem('authToken');
+      if (!token) {
+        throw new Error('Authentication required');
+      }
+
+      const response = await axios.delete(`${BASE_URL}/reviews/${bookId}/${reviewId}`, {
+        headers: {
+          Authorization: `Bearer ${token}`,
+        },
+      });
+      return response.data;
+    } catch (error) {
+      return handleError(error, "Failed to delete review");
+    }
+  },
+};

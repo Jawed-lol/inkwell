@@ -4,7 +4,7 @@ import { motion } from "framer-motion";
 import Image from "next/image";
 
 type ImageSliderProps = {
-  imageSlider: string[];
+  imageSlider: {src: string, alt: string}[];
 };
 
 const ImageSlide = ({ imageSlider }: ImageSliderProps) => {
@@ -18,11 +18,11 @@ const ImageSlide = ({ imageSlider }: ImageSliderProps) => {
         ease: "linear",
       }}
     >
-      {imageSlider.map((src, index) => (
+      {imageSlider.map((image, index) => (
         <Image
           key={index}
-          src={src}
-          alt={`Book cover image ${index + 1}`}
+          src={image.src}
+          alt={image.alt}
           height={170}
           width={170}
           className="rounded-3xl shadow-[0px_4px_10px_rgba(0,0,0,0.3)]"

@@ -10,9 +10,16 @@ import {
 } from "react"
 import { useRouter } from "next/navigation"
 
-//const API_URL = process.env.NEXT_PUBLIC_API_URL
+// Define API base URL as a constant
+const API_BASE_URL = 'https://inkwell-oblr.onrender.com/api'
+
+interface User {
+    name: string
+    email: string
+}
+
 interface AuthContextType {
-    user: { name: string; email: string } | null
+    user: User | null
     token: string | null
     loading: boolean
     isAuthenticated: boolean
@@ -23,9 +30,7 @@ interface AuthContextType {
 const AuthContext = createContext<AuthContextType | undefined>(undefined)
 
 export const AuthProvider = ({ children }: { children: ReactNode }) => {
-    const [user, setUser] = useState<{ name: string; email: string } | null>(
-        null
-    )
+    const [user, setUser] = useState<User | null>(null)
     const [token, setToken] = useState<string | null>(null)
     const [loading, setLoading] = useState(true)
     const router = useRouter()
@@ -41,10 +46,12 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
         async (authToken: string) => {
             try {
                 const response = await fetch(
-                    //`${API_URL}+/api/auth/profile`,
-                    'http://localhost:5000/api/auth/profile',
+                    `${API_BASE_URL}/auth/profile`,
                     {
-                        headers: { Authorization: `Bearer ${authToken}` },
+                        headers: { 
+                            Authorization: `Bearer ${authToken}`,
+                            'Content-Type': 'application/json'
+                        },
                     }
                 )
 
@@ -52,9 +59,11 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
                     const data = await response.json()
                     setUser(data)
                 } else {
+                    // Token is invalid or expired
                     logout()
                 }
-            } catch {
+            } catch (error) {
+                console.error("Profile fetch error:", error)
                 logout()
             } finally {
                 setLoading(false)
@@ -64,6 +73,7 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
     )
 
     useEffect(() => {
+        // Skip on server-side
         if (typeof window === "undefined") {
             setLoading(false)
             return
@@ -89,15 +99,17 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
         [fetchProfile, router]
     )
 
+    const value = {
+        user, 
+        token, 
+        loading, 
+        isAuthenticated: !!token, 
+        login, 
+        logout 
+    }
+
     return (
-        <AuthContext.Provider value={{ 
-            user, 
-            token, 
-            loading, 
-            isAuthenticated: !!token, 
-            login, 
-            logout 
-        }}>
+        <AuthContext.Provider value={value}>
             {children}
         </AuthContext.Provider>
     )

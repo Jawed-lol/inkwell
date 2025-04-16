@@ -10,11 +10,11 @@ import { motion } from "framer-motion"
 import Link from "next/link"
 import { Book } from "@/types/book"
 
-
 export default function Wishlist() {
     const { user, token, loading } = useAuth()
     const [wishlist, setWishlist] = useState<Book[]>([])
     const [error, setError] = useState<string | null>(null)
+    const [isRemoving, setIsRemoving] = useState<string | null>(null)
 
     const fetchWishlist = useCallback(async () => {
         if (!token) return
@@ -29,7 +29,7 @@ export default function Wishlist() {
                       : []
             )
             setError(null)
-        } catch {
+        } catch  {
             setError("Failed to load wishlist. Please try again.")
             setWishlist([])
         }
@@ -43,12 +43,15 @@ export default function Wishlist() {
 
     const handleRemove = async (bookId: string) => {
         if (!token) return
+        setIsRemoving(bookId)
 
         try {
             await wishlistService.remove(token, bookId)
             setWishlist(wishlist.filter((book) => book.slug !== bookId))
-        } catch {
+        } catch  {
             setError("Failed to remove item. Please try again.")
+        } finally {
+            setIsRemoving(null)
         }
     }
 
@@ -56,7 +59,6 @@ export default function Wishlist() {
         // Placeholder for cart functionality
         console.log("Add to cart:", bookId)
     }
-    console.log(wishlist)
 
     // Schema.org structured data for SEO
     const schemaData = {
@@ -68,12 +70,21 @@ export default function Wishlist() {
             item: {
                 "@type": "Book",
                 name: book.title,
-                author: book.author || "Unknown Author",
+                author: {
+                    "@type": "Person",
+                    name: typeof book.author === 'object' && book.author?.name 
+                        ? book.author.name 
+                        : typeof book.author === 'string' 
+                            ? book.author 
+                            : "Unknown Author"
+                },
                 offers: {
                     "@type": "Offer",
                     price: book.price,
                     priceCurrency: "USD",
+                    availability: "https://schema.org/InStock"
                 },
+                url: `${process.env.NEXT_PUBLIC_SITE_URL || 'https://inkwell-bookstore.com'}/book/${book.slug}`,
                 image: book.urlPath || "/placeholder.svg",
             },
         })),
@@ -83,7 +94,9 @@ export default function Wishlist() {
         return (
             <div
                 className='text-mutedSand text-center py-10'
-                role='status'>
+                role='status'
+                aria-live="polite">
+                <span className="sr-only">Loading</span>
                 Loading your wishlist...
             </div>
         )
@@ -93,11 +106,11 @@ export default function Wishlist() {
         return (
             <div className='text-mutedSand text-center py-10'>
                 Please{" "}
-                <a
+                <Link
                     href='/login'
-                    className='text-burntAmber underline'>
+                    className='text-burntAmber underline focus:ring-2 focus:ring-burntAmber focus:outline-none'>
                     log in
-                </a>{" "}
+                </Link>{" "}
                 to view your wishlist.
             </div>
         )
@@ -106,10 +119,10 @@ export default function Wishlist() {
     return (
         <>
             <Head>
-                <title>Your Wishlist | Bookstore</title>
+                <title>Your Wishlist | Inkwell Bookstore</title>
                 <meta
                     name='description'
-                    content='Explore your personalized wishlist of books at Bookstore. Save your favorite titles and add them to your cart anytime.'
+                    content='Manage your personalized wishlist of books at Inkwell Bookstore. Save your favorite titles and add them to your cart anytime.'
                 />
                 <meta
                     name='robots'
@@ -121,11 +134,11 @@ export default function Wishlist() {
                 />
                 <meta
                     property='og:title'
-                    content='Your Wishlist | Bookstore'
+                    content='Your Wishlist | Inkwell Bookstore'
                 />
                 <meta
                     property='og:description'
-                    content='View and manage your favorite books in your Bookstore wishlist.'
+                    content='View and manage your favorite books in your Inkwell Bookstore wishlist.'
                 />
                 <meta
                     property='og:type'
@@ -133,28 +146,32 @@ export default function Wishlist() {
                 />
                 <meta
                     property='og:image'
-                    content='/og-image.jpg'
-                />{" "}
-                {/* Replace with actual image */}
+                    content='/images/wishlist-og.jpg'
+                />
                 <meta
                     name='twitter:card'
                     content='summary_large_image'
                 />
                 <meta
                     name='twitter:title'
-                    content='Your Wishlist | Bookstore'
+                    content='Your Wishlist | Inkwell Bookstore'
                 />
                 <meta
                     name='twitter:description'
-                    content='View and manage your favorite books in your Bookstore wishlist.'
+                    content='View and manage your favorite books in your Inkwell Bookstore wishlist.'
                 />
+                <link rel="canonical" href={`${process.env.NEXT_PUBLIC_SITE_URL || 'https://inkwell-bookstore.com'}/dashboard/wishlist`} />
             </Head>
             <script
                 type='application/ld+json'
                 dangerouslySetInnerHTML={{ __html: JSON.stringify(schemaData) }}
             />
-            <section className='max-w-2xl mx-auto bg-deepGray p-6 rounded-lg shadow-lg my-8'>
-                <h1 className='text-xl sm:text-2xl font-bold mb-6 text-center md:text-left text-warmBeige'>
+            <section 
+                className='max-w-2xl mx-auto bg-deepGray p-6 rounded-lg shadow-lg my-8'
+                aria-labelledby="wishlist-heading">
+                <h1 
+                    id="wishlist-heading"
+                    className='text-xl sm:text-2xl font-bold mb-6 text-center md:text-left text-warmBeige'>
                     Your Wishlist
                 </h1>
                 {error && (
@@ -169,13 +186,13 @@ export default function Wishlist() {
                         Your wishlist is empty.{" "}
                         <Link
                             href='/shop'
-                            className='text-burntAmber underline'>
+                            className='text-burntAmber underline hover:text-deepCopper focus:ring-2 focus:ring-burntAmber focus:outline-none transition-colors'>
                             Browse books
                         </Link>{" "}
                         to add some!
                     </p>
                 ) : (
-                    <div className='space-y-4'>
+                    <div className='space-y-4' role="list">
                         {wishlist.map((book) => (
                             <motion.article
                                 key={book.slug}
@@ -183,18 +200,22 @@ export default function Wishlist() {
                                 animate={{ opacity: 1 }}
                                 transition={{ duration: 0.3 }}
                                 className='flex items-center gap-4 bg-slightlyLightGrey p-4 rounded-lg'
-                                aria-labelledby={`book-title-${book.slug}`}>
-                                <Image
-                                    src={book.urlPath || "/placeholder.svg"}
-                                    alt={`${book.title} cover`}
-                                    width={80}
-                                    height={120}
-                                    className='rounded-lg object-cover'
-                                    loading='lazy'
-                                />
+                                aria-labelledby={`book-title-${book.slug}`}
+                                role="listitem">
+                                <Link href={`/book/${book.slug}`} className="focus:outline-none focus:ring-2 focus:ring-burntAmber rounded-lg">
+                                    <Image
+                                        src={book.urlPath || "/placeholder.svg"}
+                                        alt={`${book.title} book cover`}
+                                        width={80}
+                                        height={120}
+                                        className='rounded-lg object-cover'
+                                        loading='lazy'
+                                    />
+                                </Link>
                                 <div className='flex-1'>
-                                    
-                                    <Link href={`/book/${book.slug}`}>
+                                    <Link 
+                                        href={`/book/${book.slug}`}
+                                        className="hover:text-burntAmber focus:outline-none focus:ring-2 focus:ring-burntAmber rounded transition-colors">
                                         <h2
                                             id={`book-title-${book.slug}`}
                                             className='text-warmBeige font-semibold text-lg'>
@@ -203,7 +224,11 @@ export default function Wishlist() {
                                     </Link>
                                     <p className='text-mutedSand'>
                                         by{" "}
-                                        {book.author.name || "Unknown Author"}
+                                        {typeof book.author === 'object' && book.author?.name 
+                                            ? book.author.name 
+                                            : typeof book.author === 'string' 
+                                                ? book.author 
+                                                : "Unknown Author"}
                                     </p>
                                     <p className='text-warmBeige font-bold'>
                                         ${book.price.toFixed(2)}
@@ -211,16 +236,15 @@ export default function Wishlist() {
                                 </div>
                                 <div className='flex gap-2'>
                                     <button
-                                        onClick={() =>
-                                            handleAddToCart(book.slug)
-                                        }
-                                        className='p-2 bg-burntAmber text-darkMutedTeal rounded-lg hover:bg-deepCopper focus:outline-none focus:ring-2 focus:ring-burntAmber'
+                                        onClick={() => handleAddToCart(book.slug)}
+                                        className='p-2 bg-burntAmber text-darkMutedTeal rounded-lg hover:bg-deepCopper focus:outline-none focus:ring-2 focus:ring-burntAmber transition-colors'
                                         aria-label={`Add ${book.title} to cart`}>
                                         <ShoppingCart size={20} />
                                     </button>
                                     <button
                                         onClick={() => handleRemove(book.slug)}
-                                        className='p-2 bg-deepCopper text-warmBeige rounded-lg hover:bg-burntAmber focus:outline-none focus:ring-2 focus:ring-deepCopper'
+                                        disabled={isRemoving === book.slug}
+                                        className='p-2 bg-deepCopper text-warmBeige rounded-lg hover:bg-burntAmber focus:outline-none focus:ring-2 focus:ring-deepCopper transition-colors disabled:opacity-50'
                                         aria-label={`Remove ${book.title} from wishlist`}>
                                         <Trash2 size={20} />
                                     </button>

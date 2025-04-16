@@ -34,6 +34,25 @@ const reviewSchema = Joi.object({
   comment: Joi.string().optional(),
 });
 
+// Helper functions
+const calculateAverageRating = (reviews) => {
+  if (!reviews || reviews.length === 0) return 0;
+  return Math.round(reviews.reduce((sum, r) => sum + r.rating, 0) / reviews.length * 10) / 10;
+};
+
+const formatBookResponse = (book) => {
+  return {
+    ...book,
+    author: {
+      name: book.author.name,
+      _id: book.author._id,
+      bio: book.author.about || book.author.bio || ''
+    },
+    slug: book.slug,
+    rating: calculateAverageRating(book.reviews),
+  };
+};
+
 // GET search books
 router.get('/search', async (req, res) => {
   try {
@@ -41,8 +60,10 @@ router.get('/search', async (req, res) => {
     if (!q) {
       return res.status(400).json({ success: false, message: 'Query parameter is required' });
     }
+    
     const authors = await Author.find({ name: { $regex: q, $options: 'i' } }).lean();
     const authorIds = authors.map((author) => author._id);
+    
     const books = await Book.find({
       $or: [
         { title: { $regex: q, $options: 'i' } },
@@ -53,20 +74,11 @@ router.get('/search', async (req, res) => {
       .populate('author', 'name about _id')
       .lean();
 
-    const formattedBooks = books.map((book) => ({
-      ...book,
-      author: {
-        name: book.author.name,
-        _id: book.author._id,
-        bio: book.author.about || ''
-      },
-      slug: book.slug,
-      rating: book.reviews.length > 0 ? Math.round(book.reviews.reduce((sum, r) => sum + r.rating, 0) / book.reviews.length * 10) / 10 : 0,
-    }));
+    const formattedBooks = books.map(formatBookResponse);
 
     res.status(200).json({ success: true, data: formattedBooks });
   } catch (error) {
-    console.error('Search books error:', error.message, error.stack);
+    console.error('Search books error:', error);
     res.status(500).json({ success: false, message: 'Failed to search books' });
   }
 });
@@ -74,8 +86,9 @@ router.get('/search', async (req, res) => {
 // GET 4 random books
 router.get('/random', async (req, res) => {
   try {
+    const count = parseInt(req.query.count) || 4;
     const randomBooks = await Book.aggregate([
-      { $sample: { size: 4 } },
+      { $sample: { size: count } },
       {
         $lookup: {
           from: 'authors',
@@ -106,46 +119,41 @@ router.get('/random', async (req, res) => {
         },
       },
     ]);
+    
     res.json(randomBooks);
   } catch (error) {
-    console.error('Random books error:', error.message, error.stack);
-    res.status(500).json({ message: 'Failed to fetch random books' });
+    console.error('Random books error:', error);
+    res.status(500).json({ success: false, message: 'Failed to fetch random books' });
   }
 });
 
 // GET all books with pagination
 router.get('/', async (req, res) => {
   try {
-    const page = parseInt(req.query.page) || 1;
-    const limit = parseInt(req.query.limit) || 10;
+    const page = Math.max(1, parseInt(req.query.page) || 1);
+    const limit = Math.min(50, Math.max(1, parseInt(req.query.limit) || 10));
     const skip = (page - 1) * limit;
 
-    const books = await Book.find()
-      .skip(skip)
-      .limit(limit)
-      .populate('author', 'name about _id')
-      .lean();
+    const [books, totalBooks] = await Promise.all([
+      Book.find()
+        .skip(skip)
+        .limit(limit)
+        .populate('author', 'name about _id')
+        .lean(),
+      Book.countDocuments()
+    ]);
 
-    const formattedBooks = books.map((book) => ({
-      ...book,
-      author: {
-        name: book.author.name,
-        _id: book.author._id,
-        bio: book.author.about || ''
-      },
-      slug: book.slug,
-      rating: book.reviews.length > 0 ? Math.round(book.reviews.reduce((sum, r) => sum + r.rating, 0) / book.reviews.length * 10) / 10 : 0,
-    }));
+    const formattedBooks = books.map(formatBookResponse);
 
-    const totalBooks = await Book.countDocuments();
     res.status(200).json({
       success: true,
       data: formattedBooks,
       totalPages: Math.ceil(totalBooks / limit),
       currentPage: page,
+      totalBooks
     });
   } catch (error) {
-    console.error('Books fetch error:', error.message, error.stack);
+    console.error('Books fetch error:', error);
     res.status(500).json({ success: false, message: 'Failed to fetch books' });
   }
 });
@@ -154,7 +162,7 @@ router.get('/', async (req, res) => {
 router.get('/:slug', async (req, res) => {
   try {
     const book = await Book.findOne({ slug: req.params.slug })
-      .populate('author', 'name bio _id')
+      .populate('author', 'name bio about _id')
       .lean();
 
     if (!book) {
@@ -162,7 +170,7 @@ router.get('/:slug', async (req, res) => {
     }
 
     // Fetch user information for each review
-    if (book.reviews && book.reviews.length > 0) {
+    if (book.reviews?.length > 0) {
       try {
         const User = mongoose.model('User');
         const userIds = book.reviews.map(review => review.user_id);
@@ -171,15 +179,12 @@ router.get('/:slug', async (req, res) => {
           _id: { $in: userIds } 
         }).select('firstName lastName email').lean();
         
-        // Create a map of user IDs to user names
-        const userMap = {};
-        users.forEach(user => {
-          userMap[user._id.toString()] = user;
-        });
+        // Create a map of user IDs to user names for O(1) lookups
+        const userMap = new Map(users.map(user => [user._id.toString(), user]));
         
         // Add user information to each review
         book.reviews = book.reviews.map(review => {
-          const user = userMap[review.user_id];
+          const user = userMap.get(review.user_id.toString());
           return {
             ...review,
             userName: user ? 
@@ -194,18 +199,11 @@ router.get('/:slug', async (req, res) => {
     }
 
     // Format the book response
-    const formattedBook = {
-      ...book,
-      author: {
-        name: book.author.name,
-        _id: book.author._id,
-        bio: book.author.bio || ''
-      }
-    };
+    const formattedBook = formatBookResponse(book);
 
     res.status(200).json({ success: true, data: formattedBook });
   } catch (error) {
-    console.error('Book fetch error:', error.message, error.stack);
+    console.error('Book fetch error:', error);
     res.status(500).json({ success: false, message: 'Failed to fetch book' });
   }
 });
@@ -222,16 +220,21 @@ router.post('/', async (req, res) => {
     const authorData = req.body.author;
 
     if (typeof authorData === 'string') {
+      // Author ID provided
       if (!mongoose.Types.ObjectId.isValid(authorData)) {
         return res.status(400).json({ success: false, message: 'Invalid author ID' });
       }
+      
       const existingAuthor = await Author.findById(authorData);
       if (!existingAuthor) {
         return res.status(400).json({ success: false, message: 'Author not found' });
       }
+      
       authorId = authorData;
     } else {
+      // Author object provided
       const existingAuthor = await Author.findOne({ name: authorData.name });
+      
       if (existingAuthor) {
         authorId = existingAuthor._id;
       } else {
@@ -239,30 +242,41 @@ router.post('/', async (req, res) => {
           name: authorData.name,
           bio: authorData.bio,
         });
-        await newAuthor.save();
-        authorId = newAuthor._id;
+        const savedAuthor = await newAuthor.save();
+        authorId = savedAuthor._id;
       }
     }
 
-    const slug = req.body.slug || slugify(req.body.title, { lower: true }) + '-' + Math.random().toString(36).slice(-4);
+    // Generate slug or use provided one
+    const slug = req.body.slug || 
+      slugify(req.body.title, { lower: true, strict: true }) + 
+      '-' + Math.random().toString(36).substring(2, 6);
+    
+    // Check for slug uniqueness
     const existingBook = await Book.findOne({ slug });
     if (existingBook) {
       return res.status(400).json({ success: false, message: 'Slug already exists' });
     }
 
+    // Create and save the new book
     const newBook = new Book({
       ...req.body,
       author: authorId,
       slug,
     });
+    
     await newBook.save();
-    const populatedBook = await Book.findById(newBook._id).populate('author', 'name about').lean();
+    
+    const populatedBook = await Book.findById(newBook._id)
+      .populate('author', 'name about bio')
+      .lean();
+    
     res.status(201).json({
       success: true,
-      data: { ...populatedBook, author: populatedBook.author.name, author_bio: populatedBook.author.about || '' },
+      data: formatBookResponse(populatedBook),
     });
   } catch (error) {
-    console.error('Book creation error:', error.message, error.stack);
+    console.error('Book creation error:', error);
     res.status(500).json({ success: false, message: 'Failed to create book' });
   }
 });
@@ -284,29 +298,37 @@ router.post('/:slug/reviews', async (req, res) => {
       return res.status(404).json({ success: false, message: 'Book not found' });
     }
 
-    const existingReview = book.reviews.find((r) => r.user_id.toString() === req.body.user_id);
+    // Check if user already reviewed this book
+    const existingReview = book.reviews.find(
+      (r) => r.user_id.toString() === req.body.user_id
+    );
+    
     if (existingReview) {
-      return res.status(400).json({ success: false, message: 'User has already reviewed this book' });
+      return res.status(400).json({ 
+        success: false, 
+        message: 'User has already reviewed this book' 
+      });
     }
 
+    // Add the new review
     book.reviews.push({
       ...req.body,
       created_at: new Date(),
     });
-    book.reviews_number += 1;
+    
+    book.reviews_number = book.reviews.length;
     await book.save();
-    const populatedBook = await Book.findById(book._id).populate('author', 'name about').lean();
+    
+    const populatedBook = await Book.findById(book._id)
+      .populate('author', 'name about bio')
+      .lean();
+    
     res.status(201).json({
       success: true,
-      data: {
-        ...populatedBook,
-        author: populatedBook.author.name,
-        author_bio: populatedBook.author.about || '',
-        slug: book.slug,
-      },
+      data: formatBookResponse(populatedBook),
     });
   } catch (error) {
-    console.error('Review creation error:', error.message, error.stack);
+    console.error('Review creation error:', error);
     res.status(500).json({ success: false, message: 'Failed to create review' });
   }
 });

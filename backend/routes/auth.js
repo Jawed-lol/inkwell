@@ -6,7 +6,6 @@ const User = require('../models/User');
 const { Book } = require('../models/Books');
 const authMiddleware = require('../middleware/auth');
 const { body, validationResult } = require('express-validator');
-
 const router = express.Router();
 
 // Helper functions
@@ -27,9 +26,9 @@ const generateToken = (userId) => {
 router.post(
   '/register',
   [
-    body('firstName').notEmpty().withMessage('First name is required'),
-    body('lastName').notEmpty().withMessage('Last name is required'),
-    body('email').isEmail().withMessage('Invalid email format'),
+    body('firstName').trim().notEmpty().withMessage('First name is required'),
+    body('lastName').trim().notEmpty().withMessage('Last name is required'),
+    body('email').trim().isEmail().normalizeEmail().withMessage('Invalid email format'),
     body('password').isLength({ min: 6 }).withMessage('Password must be at least 6 characters'),
   ],
   async (req, res) => {
@@ -67,7 +66,7 @@ router.post(
 router.post(
   '/login',
   [
-    body('email').isEmail().withMessage('Invalid email format'),
+    body('email').trim().isEmail().normalizeEmail().withMessage('Invalid email format'),
     body('password').notEmpty().withMessage('Password is required'),
   ],
   async (req, res) => {
@@ -98,7 +97,17 @@ router.post(
 // Profile GET
 router.get('/profile', authMiddleware, async (req, res) => {
   try {
-    const user = await User.findById(req.user.id).select('-password').populate('wishlist', '_id title author').lean();
+    const user = await User.findById(req.user.id)
+      .select('-password')
+      .populate({
+        path: 'wishlist',
+        select: '_id title author urlPath slug price',
+        populate: {
+          path: 'author',
+          select: 'name bio'
+        }
+      })
+      .lean();
     
     if (!user) {
       return res.status(404).json({ success: false, message: 'User not found' });
@@ -110,7 +119,8 @@ router.get('/profile', authMiddleware, async (req, res) => {
       email: user.email,
       createdAt: user.createdAt,
       wishlistItems: user.wishlist?.length || 0,
-      orderedItems: user.orders?.length || 0
+      orderedItems: user.orders?.length || 0,
+      wishlist: user.wishlist
     };
 
     res.json(response);
@@ -125,9 +135,9 @@ router.put(
   '/profile',
   authMiddleware,
   [
-    body('email').optional().isEmail().withMessage('Invalid email format'),
-    body('firstName').optional().notEmpty().withMessage('First name cannot be empty'),
-    body('lastName').optional().notEmpty().withMessage('Last name cannot be empty'),
+    body('email').optional().trim().isEmail().normalizeEmail().withMessage('Invalid email format'),
+    body('firstName').optional().trim().notEmpty().withMessage('First name cannot be empty'),
+    body('lastName').optional().trim().notEmpty().withMessage('Last name cannot be empty'),
   ],
   async (req, res) => {
     const validationError = handleValidationErrors(req, res);
@@ -171,6 +181,11 @@ router.put(
 // Wishlist routes
 router.post('/wishlist', authMiddleware, async (req, res) => {
   const { bookSlug } = req.body;
+  
+  if (!bookSlug) {
+    return res.status(400).json({ success: false, message: 'Book slug is required' });
+  }
+  
   try {
     const book = await Book.findOne({ slug: bookSlug });
     if (!book) {
@@ -189,7 +204,14 @@ router.post('/wishlist', authMiddleware, async (req, res) => {
     user.wishlist.push(book._id);
     await user.save();
     
-    const populatedUser = await User.findById(req.user.id).populate('wishlist');
+    const populatedUser = await User.findById(req.user.id).populate({
+      path: 'wishlist',
+      populate: {
+        path: 'author',
+        select: 'name bio'
+      }
+    });
+    
     res.status(200).json({ 
       success: true, 
       message: 'Book added to wishlist', 
@@ -203,7 +225,15 @@ router.post('/wishlist', authMiddleware, async (req, res) => {
 
 router.get('/wishlist', authMiddleware, async (req, res) => {
   try {
-    const user = await User.findById(req.user.id).populate('wishlist');
+    const user = await User.findById(req.user.id).populate({
+      path: 'wishlist',
+      select: '_id title author urlPath slug price',
+      populate: {
+        path: 'author',
+        select: 'name bio'
+      }
+    });
+    
     if (!user) {
       return res.status(404).json({ success: false, message: 'User not found' });
     }
@@ -217,6 +247,11 @@ router.get('/wishlist', authMiddleware, async (req, res) => {
 
 router.delete('/wishlist/:bookSlug', authMiddleware, async (req, res) => {
   const { bookSlug } = req.params;
+  
+  if (!bookSlug) {
+    return res.status(400).json({ success: false, message: 'Book slug is required' });
+  }
+  
   try {
     const book = await Book.findOne({ slug: bookSlug });
     if (!book) {
@@ -237,7 +272,15 @@ router.delete('/wishlist/:bookSlug', authMiddleware, async (req, res) => {
     
     await user.save();
     
-    const populatedUser = await User.findById(req.user.id).populate('wishlist');
+    const populatedUser = await User.findById(req.user.id).populate({
+      path: 'wishlist',
+      select: '_id title author urlPath slug price',
+      populate: {
+        path: 'author',
+        select: 'name bio'
+      }
+    });
+    
     res.status(200).json({ 
       success: true, 
       message: 'Book removed from wishlist', 
@@ -257,13 +300,20 @@ router.get('/orders', authMiddleware, async (req, res) => {
       return res.status(404).json({ success: false, message: 'User not found' });
     }
     
+    if (!user.orders || user.orders.length === 0) {
+      return res.json({ success: true, orders: [] });
+    }
+    
     // Fetch book details for orders
     const bookSlugs = new Set();
     user.orders.forEach((order) => {
       order.items.forEach((item) => bookSlugs.add(item.bookSlug));
     });
     
-    const books = await Book.find({ slug: { $in: Array.from(bookSlugs) } }).lean();
+    const books = await Book.find({ slug: { $in: Array.from(bookSlugs) } })
+      .populate('author', 'name')
+      .lean();
+      
     const bookMap = new Map(books.map((book) => [book.slug, book]));
 
     const ordersWithDetails = user.orders.map((order) => {

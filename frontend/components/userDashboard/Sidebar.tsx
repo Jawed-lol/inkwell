@@ -6,6 +6,7 @@ import {
     ShoppingBag,
     Heart,
 } from "lucide-react"
+import { useId } from "react"
 
 type Tab = "profile" | "settings" | "orders" | "wishlist"
 
@@ -15,18 +16,27 @@ interface SidebarProps {
 }
 
 export default function Sidebar({ activeTab, setActiveTab }: SidebarProps) {
+    const navId = useId()
+    
     return (
-        <aside className='bg-charcoalBlack p-6 h-full flex flex-col gap-4 shadow-lg'>
-            <nav className='space-y-2'>
+        <aside 
+            className="bg-charcoalBlack p-6 h-full flex flex-col gap-4 shadow-lg rounded-lg"
+            aria-label="Dashboard navigation">
+            <nav 
+                id={navId}
+                className="space-y-2"
+                aria-label="Dashboard sections">
                 <button
                     onClick={() => setActiveTab("profile")}
                     className={`w-full flex items-center gap-3 px-4 py-2 rounded-lg font-generalSans font-medium transition-colors ${
                         activeTab === "profile"
                             ? "bg-burntAmber text-darkMutedTeal"
                             : "text-mutedSand hover:bg-deepGray hover:text-warmBeige"
-                    }`}>
-                    <User size={20} />
-                    Profile
+                    }`}
+                    aria-current={activeTab === "profile" ? "page" : undefined}
+                    aria-label="Profile section">
+                    <User size={20} aria-hidden="true" />
+                    <span>Profile</span>
                 </button>
                 <button
                     onClick={() => setActiveTab("settings")}
@@ -34,9 +44,11 @@ export default function Sidebar({ activeTab, setActiveTab }: SidebarProps) {
                         activeTab === "settings"
                             ? "bg-burntAmber text-darkMutedTeal"
                             : "text-mutedSand hover:bg-deepGray hover:text-warmBeige"
-                    }`}>
-                    <SettingsIcon size={20} />
-                    Settings
+                    }`}
+                    aria-current={activeTab === "settings" ? "page" : undefined}
+                    aria-label="Settings section">
+                    <SettingsIcon size={20} aria-hidden="true" />
+                    <span>Settings</span>
                 </button>
                 <button
                     onClick={() => setActiveTab("orders")}
@@ -44,9 +56,11 @@ export default function Sidebar({ activeTab, setActiveTab }: SidebarProps) {
                         activeTab === "orders"
                             ? "bg-burntAmber text-darkMutedTeal"
                             : "text-mutedSand hover:bg-deepGray hover:text-warmBeige"
-                    }`}>
-                    <ShoppingBag size={20} />
-                    Orders
+                    }`}
+                    aria-current={activeTab === "orders" ? "page" : undefined}
+                    aria-label="Orders section">
+                    <ShoppingBag size={20} aria-hidden="true" />
+                    <span>Orders</span>
                 </button>
                 <button
                     onClick={() => setActiveTab("wishlist")}
@@ -54,9 +68,11 @@ export default function Sidebar({ activeTab, setActiveTab }: SidebarProps) {
                         activeTab === "wishlist"
                             ? "bg-burntAmber text-darkMutedTeal"
                             : "text-mutedSand hover:bg-deepGray hover:text-warmBeige"
-                    }`}>
-                    <Heart size={20} />
-                    Wishlist
+                    }`}
+                    aria-current={activeTab === "wishlist" ? "page" : undefined}
+                    aria-label="Wishlist section">
+                    <Heart size={20} aria-hidden="true" />
+                    <span>Wishlist</span>
                 </button>
             </nav>
         </aside>

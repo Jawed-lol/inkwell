@@ -5,122 +5,125 @@ const { Book } = require('../models/Books');
 const authMiddleware = require('../middleware/auth');
 const { body, validationResult } = require('express-validator');
 
+/**
+ * Transform cart items by fetching book details
+ * @param {Array} cartItems - Array of cart items with slug and quantity
+ * @returns {Array} - Transformed cart items with book details
+ */
 const transformCartItems = async (cartItems) => {
-  if (!cartItems || !Array.isArray(cartItems) || cartItems.length === 0) {
+  // Return empty array for invalid input
+  if (!cartItems?.length) {
     return [];
   }
 
-  const bookSlugs = cartItems.map((item) => item.slug).filter(slug => slug);
+  // Extract valid book slugs
+  const bookSlugs = cartItems.map(item => item.slug).filter(Boolean);
   
-  if (bookSlugs.length === 0) {
+  if (!bookSlugs.length) {
     return [];
   }
   
   try {
-    // Try to find books by slug
-    let books = await Book.find({ slug: { $in: bookSlugs } }).populate('author', 'name bio _id');
-    console.log('Found books by slug:', books.length, 'for slugs:', bookSlugs);
+    // Find books by slug
+    const books = await Book.find({ slug: { $in: bookSlugs } })
+      .populate('author', 'name bio _id')
+      .lean();
     
-    // If we didn't find all books, try to find the remaining ones by _id
+    // Create a map for O(1) lookups
+    const bookMap = new Map();
+    
+    // Try to find books by ID if they look like MongoDB ObjectIds
     if (books.length < bookSlugs.length) {
-      const foundSlugs = books.map(book => book.slug);
-      const missingSlugs = bookSlugs.filter(slug => !foundSlugs.includes(slug));
+      const foundSlugs = new Set(books.map(book => book.slug));
+      const possibleIds = bookSlugs
+        .filter(slug => !foundSlugs.has(slug))
+        .filter(slug => /^[0-9a-fA-F]{24}$/.test(slug));
       
-      // Filter out slugs that don't look like ObjectIds
-      const possibleIds = missingSlugs.filter(slug => /^[0-9a-fA-F]{24}$/.test(slug));
-      
-      if (possibleIds.length > 0) {
-        const additionalBooks = await Book.find({ _id: { $in: possibleIds } }).populate('author', 'name bio _id');
-        console.log('Found additional books by _id:', additionalBooks.length);
-        books = [...books, ...additionalBooks];
+      if (possibleIds.length) {
+        const additionalBooks = await Book.find({ _id: { $in: possibleIds } })
+          .populate('author', 'name bio _id')
+          .lean();
+          
+        books.push(...additionalBooks);
       }
     }
     
-    // Create a map of books by both slug and _id for easier lookup
-    const bookMap = new Map();
+    // Populate the lookup map with both slug and ID keys
     books.forEach(book => {
       if (book.slug) bookMap.set(book.slug, book);
       if (book._id) bookMap.set(book._id.toString(), book);
     });
 
-    const transformedItems = cartItems.map((item) => {
-      if (!item.slug) {
-        console.warn('Item has no slug:', item);
-        return null;
-      }
-      
-      // Try to find the book by slug or _id
-      const book = bookMap.get(item.slug);
-      
-      if (!book) {
-        console.warn('Book not found for slug:', item.slug);
-        // Return a placeholder item with author as object
+    // Transform cart items with book details
+    return cartItems
+      .map(item => {
+        if (!item.slug) return null;
+        
+        const book = bookMap.get(item.slug);
+        
+        if (!book) {
+          return createPlaceholderItem(item);
+        }
+        
         return {
-          _id: item.slug,
-          slug: item.slug,
-          title: 'Unknown Book',
-          price: 0,
-          urlPath: '/placeholder.svg',
-          author: {
-            name: 'Unknown Author',
-            _id: '',
-            bio: ''
-          },
+          _id: book._id.toString(),
+          slug: book.slug,
+          title: book.title || 'Unknown Title',
+          price: book.price || 0,
+          urlPath: book.urlPath || '/placeholder.svg',
+          author: extractAuthorInfo(book.author),
           quantity: item.quantity
         };
-      }
-      
-      // Extract author as an object
-      let author = {
-        name: 'Unknown Author',
-        _id: '',
-        bio: ''
-      };
-      
-      if (book.author) {
-        if (typeof book.author === 'string') {
-          author.name = book.author;
-        } else if (typeof book.author === 'object') {
-          author = {
-            name: book.author.name || 'Unknown Author',
-            _id: book.author._id ? book.author._id.toString() : '',
-            bio: book.author.bio || ''
-          };
-        }
-      }
-      
-      return {
-        _id: book._id.toString(),
-        slug: book.slug,
-        title: book.title || 'Unknown Title',
-        price: book.price || 0,
-        urlPath: book.urlPath || '/placeholder.svg',
-        author: author,
-        quantity: item.quantity
-      };
-    }).filter(item => item !== null);
-    
-    console.log('Transformed items:', transformedItems);
-    return transformedItems;
+      })
+      .filter(Boolean);
   } catch (error) {
     console.error('Error transforming cart items:', error);
-    // Return the original items with placeholder data and author as object
-    return cartItems.map(item => ({
-      _id: item.slug,
-      slug: item.slug,
-      quantity: item.quantity,
-      title: "Unknown Book",
-      price: 0,
-      urlPath: "/placeholder.svg",
-      author: {
-        name: "Unknown Author",
-        _id: "",
-        bio: ""
-      }
-    }));
+    // Return placeholder items on error
+    return cartItems.map(item => createPlaceholderItem(item));
   }
 };
 
+/**
+ * Create a placeholder item when book is not found
+ * @param {Object} item - Cart item
+ * @returns {Object} - Placeholder item
+ */
+const createPlaceholderItem = (item) => ({
+  _id: item.slug,
+  slug: item.slug,
+  title: 'Unknown Book',
+  price: 0,
+  urlPath: '/placeholder.svg',
+  author: {
+    name: 'Unknown Author',
+    _id: '',
+    bio: ''
+  },
+  quantity: item.quantity
+});
+
+/**
+ * Extract author information from book
+ * @param {Object|string} author - Author data
+ * @returns {Object} - Formatted author object
+ */
+const extractAuthorInfo = (author) => {
+  if (!author) {
+    return { name: 'Unknown Author', _id: '', bio: '' };
+  }
+  
+  if (typeof author === 'string') {
+    return { name: author, _id: '', bio: '' };
+  }
+  
+  return {
+    name: author.name || 'Unknown Author',
+    _id: author._id ? author._id.toString() : '',
+    bio: author.bio || ''
+  };
+};
+
+// Get cart items
 router.get('/', authMiddleware, async (req, res) => {
   try {
     const user = await User.findById(req.user.id);
@@ -129,93 +132,63 @@ router.get('/', authMiddleware, async (req, res) => {
     }
 
     const validCartItems = await transformCartItems(user.cart);
-    
     res.json({ items: validCartItems });
   } catch (error) {
-    console.error('Get cart error:', error.message, error.stack);
+    console.error('Get cart error:', error);
     res.status(500).json({ message: 'Failed to retrieve cart' });
   }
 });
 
+// Update cart items
 router.put(
   '/',
   authMiddleware,
   [
-      body('items').isArray().withMessage('Items must be an array'),
-      body('items.*.slug')
-          .isString()
-          .notEmpty()
-          .trim()
-          .withMessage('Each item must have a valid non-empty slug'),
-      body('items.*.quantity').isInt({ min: 0 }).withMessage('Each item must have a non-negative quantity'),
+    body('items').isArray().withMessage('Items must be an array'),
+    body('items.*.slug')
+      .isString()
+      .notEmpty()
+      .trim()
+      .withMessage('Each item must have a valid non-empty slug'),
+    body('items.*.quantity').isInt({ min: 0 }).withMessage('Each item must have a non-negative quantity'),
   ],
   async (req, res) => {
-      const errors = validationResult(req);
-      if (!errors.isEmpty()) {
-          return res.status(400).json({ message: errors.array()[0].msg });
+    const errors = validationResult(req);
+    if (!errors.isEmpty()) {
+      return res.status(400).json({ message: errors.array()[0].msg });
+    }
+
+    try {
+      const { items } = req.body;
+      const user = await User.findById(req.user.id);
+      if (!user) {
+        return res.status(404).json({ message: 'User not found' });
       }
 
-      try {
-          const { items } = req.body;
-          const user = await User.findById(req.user.id);
-          if (!user) {
-              return res.status(404).json({ message: 'User not found' });
-          }
+      // Filter valid items
+      const validItems = items
+        .filter(item => item.slug && typeof item.slug === 'string' && item.slug.trim() !== '')
+        .map(item => ({
+          slug: item.slug,
+          quantity: item.quantity,
+        }));
 
-          // Log incoming items for debugging
-          console.log('Received cart items:', items);
+      // Update user's cart
+      user.cart = validItems;
+      await user.save();
 
-          // Modified validation to handle errors gracefully
-          const validItems = [];
-          for (const item of items) {
-              try {
-                  if (!item.slug || typeof item.slug !== 'string' || item.slug.trim() === '') {
-                      console.warn(`Invalid slug: ${item.slug}`);
-                      continue;
-                  }
-                  
-                  validItems.push({
-                      slug: item.slug,
-                      quantity: item.quantity,
-                  });
-              } catch (err) {
-                  console.error(`Error processing item ${JSON.stringify(item)}:`, err);
-              }
-          }
-
-          // Update user's cart with valid items
-          user.cart = validItems;
-          await user.save();
-
-          // Transform and return valid cart items
-          const validCartItems = await transformCartItems(validItems);
-          
-          // If transformation returned empty but we had valid items, return the original items
-          if (validCartItems.length === 0 && validItems.length > 0) {
-              return res.json({ 
-                  items: validItems.map(item => ({
-                      slug: item.slug,
-                      quantity: item.quantity,
-                      title: "Unknown Book", // Placeholder
-                      price: 0,
-                      urlPath: "/placeholder.svg",
-                      author: {
-                          name: "Unknown Author",
-                          _id: "",
-                          bio: ""
-                      },
-                      _id: item.slug // Include _id to match frontend expectations
-                  }))
-              });
-          }
-          
-          res.json({ items: validCartItems });
-      } catch (error) {
-          console.error('Update cart error:', error.message, error.stack);
-          res.status(500).json({
-              message: error.message || 'Failed to update cart',
-          });
-      }
+      // Transform and return valid cart items
+      const transformedItems = await transformCartItems(validItems);
+      
+      res.json({ 
+        items: transformedItems.length ? transformedItems : validItems.map(createPlaceholderItem)
+      });
+    } catch (error) {
+      console.error('Update cart error:', error);
+      res.status(500).json({
+        message: error.message || 'Failed to update cart',
+      });
+    }
   }
 );
 

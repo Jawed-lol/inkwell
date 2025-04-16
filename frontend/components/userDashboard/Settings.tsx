@@ -1,8 +1,9 @@
 "use client"
 
 import { useAuth } from "@/context/AuthContext"
-import { useState, useEffect } from "react"
+import { useState, useEffect, useId } from "react"
 import { authService } from "@/lib/api"
+import { Save, AlertCircle, CheckCircle } from "lucide-react"
 
 interface ProfileFormData {
     firstName: string
@@ -37,10 +38,19 @@ export default function Settings() {
     })
     const [error, setError] = useState<string | null>(null)
     const [success, setSuccess] = useState<string | null>(null)
+    const [isLoading, setIsLoading] = useState(false)
+    
+    // Generate unique IDs for form elements
+    const formId = useId()
+    const firstNameId = useId()
+    const lastNameId = useId()
+    const emailId = useId()
+    const statusId = useId()
 
     useEffect(() => {
         if (token) {
             const fetchProfile = async () => {
+                setIsLoading(true)
                 try {
                     const response = await authService.getProfile(token)
                     
@@ -72,6 +82,8 @@ export default function Settings() {
                 } catch (error) {
                     console.error("Error fetching profile:", error)
                     setError("Failed to load profile data")
+                } finally {
+                    setIsLoading(false)
                 }
             }
             fetchProfile()
@@ -82,6 +94,7 @@ export default function Settings() {
         e.preventDefault()
         setError(null)
         setSuccess(null)
+        setIsLoading(true)
 
         try {
             const updatePayload: ProfileUpdatePayload = {
@@ -114,6 +127,8 @@ export default function Settings() {
         } catch (error) {
             console.error("Error updating profile:", error)
             setError("Failed to update profile")
+        } finally {
+            setIsLoading(false)
         }
     }
 
@@ -122,68 +137,119 @@ export default function Settings() {
     }
 
     return (
-        <div className='w-full max-w-2xl mx-auto bg-deepGray p-4 sm:p-6 rounded-lg shadow-lg'>
-            <h2 className='text-lg sm:text-xl md:text-2xl font-bold mb-4 sm:mb-6 text-center text-warmBeige'>
+        <section 
+            className="w-full max-w-2xl mx-auto bg-deepGray p-4 sm:p-6 rounded-lg shadow-lg"
+            aria-labelledby="settings-heading">
+            <h1 
+                id="settings-heading"
+                className="text-lg sm:text-xl md:text-2xl font-bold mb-4 sm:mb-6 text-center text-warmBeige">
                 Account Settings
-            </h2>
+            </h1>
+            
+            {isLoading && !formData.email && (
+                <div 
+                    className="text-center p-4" 
+                    role="status" 
+                    aria-live="polite">
+                    <div className="animate-pulse">
+                        Loading your profile information...
+                    </div>
+                </div>
+            )}
+            
             <form
+                id={formId}
                 onSubmit={handleSubmit}
-                className='space-y-4 sm:space-y-6'>
-                <div>
-                    <label className='block text-mutedSand text-sm sm:text-base mb-1'>
-                        First Name
-                    </label>
-                    <input
-                        type='text'
-                        name='firstName'
-                        value={formData.firstName}
-                        onChange={handleChange}
-                        className='w-full sm:w-1/2 p-2 bg-slightlyLightGrey border border-darkMocha rounded text-warmBeige focus:outline-none focus:ring-2 focus:ring-burntAmber text-sm sm:text-base'
-                        placeholder='Your First Name'
-                    />
+                className="space-y-4 sm:space-y-6"
+                aria-describedby={error || success ? statusId : undefined}>
+                <div className="grid gap-4 sm:gap-6">
+                    <div>
+                        <label 
+                            htmlFor={firstNameId} 
+                            className="block text-mutedSand text-sm sm:text-base mb-1">
+                            First Name
+                        </label>
+                        <input
+                            type="text"
+                            id={firstNameId}
+                            name="firstName"
+                            value={formData.firstName}
+                            onChange={handleChange}
+                            className="w-full p-2 bg-slightlyLightGrey border border-darkMocha rounded text-warmBeige focus:outline-none focus:ring-2 focus:ring-burntAmber text-sm sm:text-base"
+                            placeholder="Your First Name"
+                            aria-required="true"
+                            disabled={isLoading}
+                        />
+                    </div>
+                    
+                    <div>
+                        <label 
+                            htmlFor={lastNameId} 
+                            className="block text-mutedSand text-sm sm:text-base mb-1">
+                            Last Name
+                        </label>
+                        <input
+                            type="text"
+                            id={lastNameId}
+                            name="lastName"
+                            value={formData.lastName}
+                            onChange={handleChange}
+                            className="w-full p-2 bg-slightlyLightGrey border border-darkMocha rounded text-warmBeige focus:outline-none focus:ring-2 focus:ring-burntAmber text-sm sm:text-base"
+                            placeholder="Your Last Name"
+                            aria-required="true"
+                            disabled={isLoading}
+                        />
+                    </div>
+                    
+                    <div>
+                        <label 
+                            htmlFor={emailId} 
+                            className="block text-mutedSand text-sm sm:text-base mb-1">
+                            Email
+                        </label>
+                        <input
+                            type="email"
+                            id={emailId}
+                            name="email"
+                            value={formData.email}
+                            onChange={handleChange}
+                            className="w-full p-2 bg-slightlyLightGrey border border-darkMocha rounded text-warmBeige focus:outline-none focus:ring-2 focus:ring-burntAmber text-sm sm:text-base"
+                            placeholder="Your Email"
+                            aria-required="true"
+                            disabled={isLoading}
+                        />
+                    </div>
                 </div>
-                <div>
-                    <label className='block text-mutedSand text-sm sm:text-base mb-1'>
-                        Last Name
-                    </label>
-                    <input
-                        type='text'
-                        name='lastName'
-                        value={formData.lastName}
-                        onChange={handleChange}
-                        className='w-full sm:w-1/2 p-2 bg-slightlyLightGrey border border-darkMocha rounded text-warmBeige focus:outline-none focus:ring-2 focus:ring-burntAmber text-sm sm:text-base'
-                        placeholder='Your Last Name'
-                    />
-                </div>
-                <div>
-                    <label className='block text-mutedSand text-sm sm:text-base mb-1'>
-                        Email
-                    </label>
-                    <input
-                        type='email'
-                        name='email'
-                        value={formData.email}
-                        onChange={handleChange}
-                        className='w-full sm:w-1/2 p-2 bg-slightlyLightGrey border border-darkMocha rounded text-warmBeige focus:outline-none focus:ring-2 focus:ring-burntAmber text-sm sm:text-base'
-                        placeholder='Your Email'
-                    />
-                </div>
-                {error && (
-                    <p className='text-deepCopper text-sm sm:text-base'>
-                        {error}
-                    </p>
+                
+                {(error || success) && (
+                    <div 
+                        id={statusId}
+                        className={`p-3 rounded ${error ? 'bg-red-900 bg-opacity-20' : 'bg-green-900 bg-opacity-20'}`}
+                        role={error ? "alert" : "status"}
+                        aria-live="polite">
+                        <div className="flex items-center gap-2">
+                            {error ? (
+                                <AlertCircle size={18} className="text-deepCopper" aria-hidden="true" />
+                            ) : (
+                                <CheckCircle size={18} className="text-burntAmber" aria-hidden="true" />
+                            )}
+                            <p className={`text-sm sm:text-base ${error ? 'text-deepCopper' : 'text-burntAmber'}`}>
+                                {error || success}
+                            </p>
+                        </div>
+                    </div>
                 )}
-                {success && (
-                    <p className='text-burntAmber text-sm sm:text-base'>
-                        {success}
-                    </p>
-                )}
-                <button
-                    type='submit'
-                    className='w-full sm:w-auto px-4 py-2 bg-burntAmber text-darkMutedTeal rounded hover:bg-deepCopper transition-colors text-sm sm:text-base font-semibold'>
-                    Save Changes
-                </button>
+                
+                <div className="flex justify-end">
+                    <button
+                        type="submit"
+                        className="px-4 py-2 bg-burntAmber text-darkMutedTeal rounded hover:bg-deepCopper transition-colors text-sm sm:text-base font-semibold flex items-center gap-2 focus:outline-none focus:ring-2 focus:ring-burntAmber focus:ring-offset-2 focus:ring-offset-deepGray disabled:opacity-50 disabled:cursor-not-allowed"
+                        disabled={isLoading}>
+                        <Save size={18} aria-hidden="true" />
+                        {isLoading ? 'Saving...' : 'Save Changes'}
+                    </button>
+                </div>
             </form>
-        </div>
+        </section>
     )
 }

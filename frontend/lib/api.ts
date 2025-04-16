@@ -21,6 +21,7 @@ interface OrderItem {
     quantity: number
     price: number
     _id: string
+    author: string
 }
 
 interface Order {

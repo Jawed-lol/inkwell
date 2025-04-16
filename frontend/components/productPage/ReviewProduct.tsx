@@ -1,8 +1,9 @@
-import { motion } from "framer-motion"
+import { motion, useReducedMotion } from "framer-motion"
 import { Star } from "lucide-react"
-import { useState } from "react"
+import { useState, useEffect } from "react"
 import { useAuth } from "@/context/AuthContext"
 import { reviewService } from "@/lib/api"
+import Link from "next/link"
 
 interface ReviewProps {
     id: string | number
@@ -18,38 +19,44 @@ interface AddReviewProps {
 }
 
 const ReviewProduct = ({ id, user, rating, date, text }: ReviewProps) => {
-    const displayName = user || "Anonymous";
+    const prefersReducedMotion = useReducedMotion()
+    const displayName = user || "Anonymous"
+    const formattedDate = new Date(date).toLocaleDateString(undefined, {
+        year: 'numeric',
+        month: 'long',
+        day: 'numeric'
+    })
     
     return (
         <motion.div
             key={id}
-            whileHover={{ y: -5 }}
-            className='bg-deepGray p-6 rounded-xl'
+            whileHover={prefersReducedMotion ? {} : { y: -5 }}
+            className="bg-deepGray p-6 rounded-xl"
             role="article"
             aria-labelledby={`review-${id}-author`}
         >
-            <div className='flex justify-between items-start mb-4'>
+            <div className="flex justify-between items-start mb-4">
                 <div>
-                    <h3 id={`review-${id}-author`} className='text-warmBeige font-semibold mb-1'>
+                    <h3 id={`review-${id}-author`} className="text-warmBeige font-semibold mb-1">
                         {displayName}
                     </h3>
-                    <time dateTime={new Date(date).toISOString()} className='text-mutedSand text-sm'>
-                        {date}
+                    <time dateTime={new Date(date).toISOString()} className="text-mutedSand text-sm">
+                        {formattedDate}
                     </time>
                 </div>
-                <div className='flex gap-1' aria-label={`Rating: ${rating} out of 5 stars`}>
+                <div className="flex gap-1" aria-label={`Rating: ${rating} out of 5 stars`}>
                     {[...Array(5)].map((_, i) => (
                         <Star
                             key={i}
                             size={16}
-                            className='text-warmBeige'
+                            className="text-warmBeige"
                             fill={i < rating ? "#D97706" : "none"}
                             aria-hidden="true"
                         />
                     ))}
                 </div>
             </div>
-            <p className='text-mutedSand'>{text || "No comment provided."}</p>
+            <p className="text-mutedSand">{text || "No comment provided."}</p>
         </motion.div>
     )
 }
@@ -62,46 +69,52 @@ export const AddReview = ({ productId, onReviewAdded }: AddReviewProps) => {
     const [isSubmitting, setIsSubmitting] = useState<boolean>(false)
     const [error, setError] = useState<string>("")
     const [success, setSuccess] = useState<boolean>(false)
+    const prefersReducedMotion = useReducedMotion()
+    const [isMounted, setIsMounted] = useState(false)
+    
+    useEffect(() => {
+        setIsMounted(true)
+    }, [])
     
     const handleSubmit = async (e: React.FormEvent) => {
-        e.preventDefault();
+        e.preventDefault()
         
         if (rating === 0) {
-            setError("Please select a rating");
-            return;
+            setError("Please select a rating")
+            return
         }
         
         if (!reviewText.trim()) {
-            setError("Please enter your review");
-            return;
+            setError("Please enter your review")
+            return
         }
         
-        setIsSubmitting(true);
-        setError("");
+        setIsSubmitting(true)
+        setError("")
         
         try {
-            await reviewService.submitReview(productId, rating, reviewText);
+            await reviewService.submitReview(productId, rating, reviewText)
             
-            setSuccess(true);
-            setReviewText("");
-            setRating(0);
-            onReviewAdded();
+            setSuccess(true)
+            setReviewText("")
+            setRating(0)
+            onReviewAdded()
             
             setTimeout(() => {
-                setSuccess(false);
-            }, 3000);
+                setSuccess(false)
+            }, 3000)
         } catch (err) {
-            setError(err instanceof Error ? err.message : 'An error occurred');
+            setError(err instanceof Error ? err.message : 'An error occurred')
         } finally {
-            setIsSubmitting(false);
+            setIsSubmitting(false)
         }
-    };
+    }
 
     if (!isAuthenticated) {
         return (
             <div className="bg-deepGray p-6 rounded-xl mt-6" role="alert">
                 <p className="text-warmBeige text-center">
-                    Please <a href="/login" className="text-burntAmber hover:text-deepCopper underline focus:outline-none focus:ring-2 focus:ring-burntAmber focus:ring-offset-2 focus:ring-offset-deepGray">log in</a> to leave a review.
+                    Please <Link href="/login" className="text-burntAmber hover:text-deepCopper underline focus:outline-none focus:ring-2 focus:ring-burntAmber focus:ring-offset-2 focus:ring-offset-deepGray">log in</Link> to leave a review.
                 </p>
             </div>
         )
@@ -116,7 +129,7 @@ export const AddReview = ({ productId, onReviewAdded }: AddReviewProps) => {
                     onClick={() => setRating(i + 1)}
                     onMouseEnter={() => setHoverRating(i + 1)}
                     onMouseLeave={() => setHoverRating(0)}
-                    className="focus:outline-none focus:ring-2 focus:ring-burntAmber p-1"
+                    className="focus:outline-none focus:ring-2 focus:ring-burntAmber p-1 rounded"
                     aria-label={`Rate ${i + 1} star${i !== 0 ? 's' : ''}`}
                     aria-pressed={rating === i + 1}
                 >
@@ -129,41 +142,51 @@ export const AddReview = ({ productId, onReviewAdded }: AddReviewProps) => {
                 </button>
             ))}
         </div>
-    );
+    )
 
     return (
         <motion.div
-            initial={{ opacity: 0, y: 20 }}
+            initial={!isMounted || prefersReducedMotion ? { opacity: 1, y: 0 } : { opacity: 0, y: 20 }}
             animate={{ opacity: 1, y: 0 }}
-            className='bg-deepGray p-6 rounded-xl mt-6'
-            role="form"
+            className="bg-deepGray p-6 rounded-xl mt-6"
             aria-labelledby="review-form-title"
         >
-            <h3 id="review-form-title" className='text-warmBeige font-semibold mb-4 text-lg'>Write a Review</h3>
+            <h3 id="review-form-title" className="text-warmBeige font-semibold mb-4 text-lg">Write a Review</h3>
             
             {success && (
-                <div className="bg-green-800 bg-opacity-20 border border-green-700 text-green-300 p-3 rounded-lg mb-4" role="alert" aria-live="polite">
+                <div 
+                    className="bg-green-800 bg-opacity-20 border border-green-700 text-green-300 p-3 rounded-lg mb-4" 
+                    role="status" 
+                    aria-live="polite"
+                >
                     Your review has been submitted successfully!
                 </div>
             )}
             
             {error && (
-                <div className="bg-red-800 bg-opacity-20 border border-red-700 text-red-300 p-3 rounded-lg mb-4" role="alert" aria-live="assertive">
+                <div 
+                    className="bg-red-800 bg-opacity-20 border border-red-700 text-red-300 p-3 rounded-lg mb-4" 
+                    role="alert" 
+                    aria-live="assertive"
+                >
                     {error}
                 </div>
             )}
             
-            <form onSubmit={handleSubmit} noValidate>
+            <form onSubmit={handleSubmit} noValidate aria-label="Review submission form">
                 <div className="mb-4">
                     <fieldset>
-                        <legend className="block text-warmBeige mb-2">Your Rating (required)</legend>
-                        {renderStars()}
+                        <legend className="block text-warmBeige mb-2">Your Rating <span aria-hidden="true">(required)</span></legend>
+                        <span id="rating-description" className="sr-only">Select a rating from 1 to 5 stars</span>
+                        <div aria-describedby="rating-description">
+                            {renderStars()}
+                        </div>
                     </fieldset>
                 </div>
                 
                 <div className="mb-4">
                     <label htmlFor="reviewText" className="block text-warmBeige mb-2">
-                        Your Review (required)
+                        Your Review <span aria-hidden="true">(required)</span>
                     </label>
                     <textarea
                         id="reviewText"

@@ -6,6 +6,7 @@ const { Book } = require('../models/Books');
 const authMiddleware = require('../middleware/auth');
 const { body, validationResult } = require('express-validator');
 
+// POST route to create a new order
 router.post(
   '/',
   authMiddleware,
@@ -29,9 +30,14 @@ router.post(
 
       const { items } = req.body;
       const bookSlugs = items.map((item) => item.bookSlug);
+      
+      // Fetch all books in one query
       const books = await Book.find({ slug: { $in: bookSlugs } }).lean();
+      
+      // Create a map for O(1) lookups
       const bookMap = new Map(books.map((book) => [book.slug, book]));
 
+      // Validate all items before making any changes
       const validatedItems = items.map((item) => {
         const book = bookMap.get(item.bookSlug);
         if (!book) {
@@ -50,11 +56,17 @@ router.post(
         };
       });
 
-      // Update stock
-      for (const item of validatedItems) {
-        await Book.updateOne({ slug: item.bookSlug }, { $inc: { stock: -item.quantity } });
-      }
+      // Update stock for all books in bulk
+      const bulkOps = validatedItems.map(item => ({
+        updateOne: {
+          filter: { slug: item.bookSlug },
+          update: { $inc: { stock: -item.quantity } }
+        }
+      }));
+      
+      await Book.bulkWrite(bulkOps);
 
+      // Calculate total and create order
       const total = validatedItems.reduce((sum, item) => sum + item.price * item.quantity, 0);
       const order = {
         orderId: `ORD-${uuidv4()}`,
@@ -72,13 +84,14 @@ router.post(
       res.status(201).json({ success: true, message: 'Order placed successfully', data: order });
     } catch (error) {
       console.error('Order creation error:', error.message, error.stack);
-      res.status(
-        error.message.includes('not found')
-          ? 404
-          : error.message.includes('mismatch') || error.message.includes('stock')
-          ? 400
-          : 500
-      ).json({
+      
+      // Determine appropriate status code based on error message
+      const statusCode = 
+        error.message.includes('not found') ? 404 :
+        error.message.includes('mismatch') || error.message.includes('stock') ? 400 : 
+        500;
+        
+      res.status(statusCode).json({
         success: false,
         message: error.message || 'Failed to create order',
       });
@@ -86,6 +99,7 @@ router.post(
   }
 );
 
+// GET route to fetch user orders
 router.get('/', authMiddleware, async (req, res) => {
   try {
     const user = await User.findById(req.user.id);
@@ -93,30 +107,35 @@ router.get('/', authMiddleware, async (req, res) => {
       return res.status(404).json({ success: false, message: 'User not found' });
     }
 
-    // Support pagination
-    const page = parseInt(req.query.page) || 1;
-    const limit = parseInt(req.query.limit) || 10;
+    // Support pagination with defaults
+    const page = Math.max(1, parseInt(req.query.page) || 1);
+    const limit = Math.min(50, Math.max(1, parseInt(req.query.limit) || 10));
     const startIndex = (page - 1) * limit;
+    const endIndex = startIndex + limit;
 
-    // Get unique book slugs from orders
+    // Get unique book slugs from orders for the current page only
     const bookSlugs = new Set();
-    user.orders.forEach((order) => {
-      order.items.forEach((item) => {
+    const paginatedOrders = user.orders.slice(startIndex, endIndex);
+    
+    paginatedOrders.forEach(order => {
+      order.items.forEach(item => {
         if (item.bookSlug) {
           bookSlugs.add(item.bookSlug);
         }
       });
     });
 
-    // Fetch books
-    const books = await Book.find({ slug: { $in: Array.from(bookSlugs) } }).lean();
-    const bookMap = new Map(books.map((book) => [book.slug, book]));
+    // Fetch only the books needed for this page
+    const books = await Book.find({ 
+      slug: { $in: Array.from(bookSlugs) } 
+    }).populate('author', 'name').lean();
+    
+    const bookMap = new Map(books.map(book => [book.slug, book]));
 
     // Enrich orders with book details
-    const paginatedOrders = user.orders.slice(startIndex, startIndex + limit);
-    const ordersWithDetails = paginatedOrders.map((order) => {
+    const ordersWithDetails = paginatedOrders.map(order => {
       const orderObj = order.toObject();
-      orderObj.items = orderObj.items.map((item) => {
+      orderObj.items = orderObj.items.map(item => {
         const book = item.bookSlug && bookMap.get(item.bookSlug);
         return {
           ...item,
@@ -142,16 +161,19 @@ router.get('/', authMiddleware, async (req, res) => {
       return orderObj;
     });
 
-    console.log('Orders response:', JSON.stringify(ordersWithDetails, null, 2));
     res.json({
       success: true,
       orders: ordersWithDetails,
       totalPages: Math.ceil(user.orders.length / limit),
       currentPage: page,
+      totalOrders: user.orders.length
     });
   } catch (error) {
     console.error('Fetch orders error:', error);
-    res.status(500).json({ success: false, message: 'Failed to fetch orders' });
+    res.status(500).json({ 
+      success: false, 
+      message: error.message || 'Failed to fetch orders' 
+    });
   }
 });
 

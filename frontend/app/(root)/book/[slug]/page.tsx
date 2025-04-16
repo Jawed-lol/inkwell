@@ -21,45 +21,45 @@ export default function BookPage() {
     const [relatedBooks, setRelatedBooks] = useState<Book[]>([])
     const [loading, setLoading] = useState(true)
     const [error, setError] = useState("")
-
-    // Remove extra whitespace
-    const getBookDetails = async () => {
-        try {
-            setLoading(true)
-            const bookData = await bookService.fetchBySlug(bookSlug)
-            
-            const bookWithAuthor = bookData.data as Book;
-            
-            if (typeof bookWithAuthor.author === 'string') {
-                bookWithAuthor.author = {
-                    name: bookWithAuthor.author as unknown as string,
-                    _id: (bookWithAuthor as { author_id?: string }).author_id || '',
-                    bio: (bookWithAuthor as { author_bio?: string }).author_bio || ''
-                };
-            }
-            
-            setBook(bookWithAuthor)
-
-            // Fetch related books by genre
-            const allBooks = await bookService.fetchBooks()
-            const filteredRelatedBooks = (allBooks.data as Book[])
-                .filter(
-                    (b) =>
-                        b.slug !== bookSlug &&
-                        b.genre === (bookData.data as Book).genre
-                )
-                .slice(0, 4)
-
-            setRelatedBooks(filteredRelatedBooks)
-        } catch (err) {
-            console.error("Failed to load book details:", err)
-            setError("Failed to load book details. Please try again later.")
-        } finally {
-            setLoading(false)
-        }
-    }
+    const [showAllReviews, setShowAllReviews] = useState(false)
 
     useEffect(() => {
+        const getBookDetails = async () => {
+            try {
+                setLoading(true)
+                const bookData = await bookService.fetchBySlug(bookSlug)
+                
+                const bookWithAuthor = bookData.data as Book;
+                
+                if (typeof bookWithAuthor.author === 'string') {
+                    bookWithAuthor.author = {
+                        name: bookWithAuthor.author as unknown as string,
+                        _id: (bookWithAuthor as { author_id?: string }).author_id || '',
+                        bio: (bookWithAuthor as { author_bio?: string }).author_bio || ''
+                    };
+                }
+                
+                setBook(bookWithAuthor)
+
+                const allBooks = await bookService.fetchBooks()
+                const filteredRelatedBooks = (allBooks.data as Book[])
+                    .filter(
+                        (b) =>
+                            b.slug !== bookSlug &&
+                            b.genre === (bookData.data as Book).genre
+                    )
+                    .slice(0, 4)
+
+                setRelatedBooks(filteredRelatedBooks)
+
+            } catch (err) {
+                console.error("Failed to load book details:", err)
+                setError("Failed to load book details. Please try again later.")
+            } finally {
+                setLoading(false)
+            }
+        }
+
         if (bookSlug) getBookDetails()
     }, [bookSlug])
 
@@ -128,7 +128,7 @@ export default function BookPage() {
     const bookTitle = `${book.title} by ${typeof book.author === 'string' ? book.author : book.author.name}`;
     const bookDescription = book.description.slice(0, 150) + "...";
     const authorName = typeof book.author === 'string' ? book.author : book.author.name;
-    const canonicalUrl = `https://www.inkwellbookstore.com/books/${bookSlug}`;
+    const canonicalUrl = `https://v0-inkwell.vercel.app//books/${bookSlug}`;
     const keywords = `${book.title}, ${authorName}, ${book.genre}, bookstore, books, reading, literature`;
     
     return (
@@ -229,24 +229,38 @@ export default function BookPage() {
                         </div>
                         
                         {book.reviews && book.reviews.length > 0 ? (
-                            <div className='grid md:grid-cols-2 lg:grid-cols-3 gap-6'>
-                                {book.reviews.map((review) => (
-                                    <ReviewProduct
-                                        key={review._id}
-                                        id={review._id}
-                                        user={review.userName || "User"}
-                                        rating={review.rating}
-                                        text={review.comment || ""}
-                                        date={new Date(
-                                            review.created_at
-                                        ).toLocaleDateString("en-US", {
-                                            year: "numeric",
-                                            month: "long",
-                                            day: "numeric"
-                                        })}
-                                    />
-                                ))}
-                            </div>
+                            <>
+                                <div className='grid md:grid-cols-2 lg:grid-cols-3 gap-6'>
+                                    {(showAllReviews ? book.reviews : book.reviews.slice(0, 6)).map((review) => (
+                                        <ReviewProduct
+                                            key={review._id}
+                                            id={review._id}
+                                            user={review.userName || "User"}
+                                            rating={review.rating}
+                                            text={review.comment || ""}
+                                            date={new Date(
+                                                review.created_at
+                                            ).toLocaleDateString("en-US", {
+                                                year: "numeric",
+                                                month: "long",
+                                                day: "numeric"
+                                            })}
+                                        />
+                                    ))}
+                                </div>
+                                
+                                {!showAllReviews && book.reviews.length > 6 && (
+                                    <div className="mt-8 text-center">
+                                        <button 
+                                            onClick={() => setShowAllReviews(true)}
+                                            className="font-author bg-burntAmber text-darkMutedTeal px-4 py-2 rounded-lg hover:bg-deepCopper transition-colors duration-200"
+                                            aria-label="Show more reviews"
+                                        >
+                                            See More Reviews ({book.reviews.length - 6} more)
+                                        </button>
+                                    </div>
+                                )}
+                            </>
                         ) : (
                             <p className='text-warmBeige'>
                                 No reviews yet. Be the first to leave a review!

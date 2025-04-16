@@ -10,6 +10,7 @@ import {
 } from "react"
 import { useRouter } from "next/navigation"
 
+//const API_URL = process.env.NEXT_PUBLIC_API_URL
 interface AuthContextType {
     user: { name: string; email: string } | null
     token: string | null
@@ -40,7 +41,8 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
         async (authToken: string) => {
             try {
                 const response = await fetch(
-                    "https://inkwell-oblr.onrender.com/api/auth/profile",
+                    //`${API_URL}+/api/auth/profile`,
+                    'http://localhost:5000/api/auth/profile',
                     {
                         headers: { Authorization: `Bearer ${authToken}` },
                     }

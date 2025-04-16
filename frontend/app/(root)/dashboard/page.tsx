@@ -21,14 +21,11 @@ const tabTitles: Record<Tab, string> = {
 
 const tabDescriptions: Record<Tab, string> = {
     profile: "Manage your personal profile information and preferences.",
-    settings:
-        "Update your account settings, notifications, and privacy options.",
+    settings: "Update your account settings, notifications, and privacy options.",
     orders: "View and track your current and past orders.",
-    wishlist:
-        "Browse your saved items and add them to cart when ready to purchase.",
+    wishlist: "Browse your saved items and add them to cart when ready to purchase.",
 }
 
-// Separate component to handle useSearchParams
 function DashboardContent() {
     const router = useRouter()
     const searchParams = useSearchParams()
@@ -36,8 +33,7 @@ function DashboardContent() {
 
     const [activeTab, setActiveTab] = useState<Tab>(() => {
         const tabFromQuery = searchParams.get("tab") as Tab
-        return tabFromQuery &&
-            ["profile", "settings", "orders", "wishlist"].includes(tabFromQuery)
+        return tabFromQuery && ["profile", "settings", "orders", "wishlist"].includes(tabFromQuery)
             ? tabFromQuery
             : "profile"
     })
@@ -46,10 +42,7 @@ function DashboardContent() {
 
     useEffect(() => {
         const tabFromQuery = searchParams.get("tab") as Tab
-        if (
-            tabFromQuery &&
-            ["profile", "settings", "orders", "wishlist"].includes(tabFromQuery)
-        ) {
+        if (tabFromQuery && ["profile", "settings", "orders", "wishlist"].includes(tabFromQuery)) {
             setActiveTab(tabFromQuery)
         } else {
             setActiveTab("profile")
@@ -70,66 +63,38 @@ function DashboardContent() {
         }
     }, [activeTab])
 
-    // Enhanced structured data with more context
-    const generateStructuredData = (): object => {
-        return {
-            "@context": "https://schema.org",
-            "@type": "BreadcrumbList",
-            itemListElement: [
-                {
-                    "@type": "ListItem",
-                    position: 1,
-                    name: "Home",
-                    item: "https://inkwellbookstore.com",
-                },
-                {
-                    "@type": "ListItem",
-                    position: 2,
-                    name: "Account Dashboard",
-                    item: "https://inkwellbookstore.com/dashboard",
-                },
-                {
-                    "@type": "ListItem",
-                    position: 3,
-                    name: tabTitles[activeTab],
-                    item: `https://inkwellbookstore.com/dashboard?tab=${activeTab}`,
-                },
-            ],
-        }
-    }
-
-    // Generate WebPage structured data for better context
-    const generateWebPageData = (): object => {
-        return {
-            "@context": "https://schema.org",
-            "@type": "WebPage",
-            name: pageTitle,
-            description: tabDescriptions[activeTab],
-            breadcrumb: {
-                "@type": "BreadcrumbList",
-                itemListElement: [
-                    {
-                        "@type": "ListItem",
-                        position: 1,
-                        name: "Home",
-                        item: "https://inkwellbookstore.com",
-                    },
-                    {
-                        "@type": "ListItem",
-                        position: 2,
-                        name: "Account Dashboard",
-                        item: "https://inkwellbookstore.com/dashboard",
-                    },
-                    {
-                        "@type": "ListItem",
-                        position: 3,
-                        name: tabTitles[activeTab],
-                        item: `https://inkwellbookstore.com/dashboard?tab=${activeTab}`,
-                    },
-                ],
+    const generateStructuredData = (): object => ({
+        "@context": "https://schema.org",
+        "@type": "BreadcrumbList",
+        itemListElement: [
+            {
+                "@type": "ListItem",
+                position: 1,
+                name: "Home",
+                item: "https://inkwellbookstore.com",
             },
-        }
-    }
+            {
+                "@type": "ListItem",
+                position: 2,
+                name: "Account Dashboard",
+                item: "https://inkwellbookstore.com/dashboard",
+            },
+            {
+                "@type": "ListItem",
+                position: 3,
+                name: tabTitles[activeTab],
+                item: `https://inkwellbookstore.com/dashboard?tab=${activeTab}`,
+            },
+        ],
+    })
+
+    const generateWebPageData = (): object => ({
+        "@context": "https://schema.org",
+        "@type": "WebPage",
+        name: pageTitle,
+        description: tabDescriptions[activeTab],
+        breadcrumb: generateStructuredData(),
+    })
 
     const handleTabSelect = (tab: Tab): void => {
         setActiveTab(tab)
@@ -157,39 +122,23 @@ function DashboardContent() {
         <>
             <Head>
                 <title>{pageTitle}</title>
-                <meta
-                    name='description'
-                    content={tabDescriptions[activeTab]}
-                />
-                <meta
-                    name='robots'
-                    content='noindex, nofollow'
-                />
-                <link
-                    rel='canonical'
-                    href={`https://inkwellbookstore.com/dashboard?tab=${activeTab}`}
-                />
-                {/* Open Graph tags for social sharing */}
+                <meta name='description' content={tabDescriptions[activeTab]} />
+                <meta name='robots' content='noindex, nofollow' />
+                <link rel='canonical' href={`https://inkwellbookstore.com/dashboard?tab=${activeTab}`} />
                 <meta property="og:title" content={pageTitle} />
                 <meta property="og:description" content={tabDescriptions[activeTab]} />
                 <meta property="og:type" content="website" />
                 <meta property="og:url" content={`https://inkwellbookstore.com/dashboard?tab=${activeTab}`} />
                 <meta property="og:site_name" content="Inkwell Bookstore" />
-                
-                {/* Twitter Card data */}
                 <meta name="twitter:card" content="summary" />
                 <meta name="twitter:title" content={pageTitle} />
                 <meta name="twitter:description" content={tabDescriptions[activeTab]} />
-                
-                {/* Structured data for breadcrumbs */}
                 <script
                     type='application/ld+json'
                     dangerouslySetInnerHTML={{
                         __html: JSON.stringify(generateStructuredData()),
                     }}
                 />
-                
-                {/* Structured data for webpage */}
                 <script
                     type='application/ld+json'
                     dangerouslySetInnerHTML={{
@@ -205,30 +154,17 @@ function DashboardContent() {
                     aria-label={isSidebarOpen ? "Close menu" : "Open menu"}
                     aria-expanded={isSidebarOpen}>
                     {isSidebarOpen ? (
-                        <span
-                            className='text-xl'
-                            aria-hidden='true'>
-                            ✕
-                        </span>
+                        <span className='text-xl' aria-hidden='true'>✕</span>
                     ) : (
-                        <span
-                            className='text-xl'
-                            aria-hidden='true'>
-                            ☰
-                        </span>
+                        <span className='text-xl' aria-hidden='true'>☰</span>
                     )}
                 </button>
 
                 <div
-                    className={`${
-                        isSidebarOpen ? "translate-x-0" : "-translate-x-full"
-                    } md:translate-x-0 fixed top-0 left-0 w-64 h-full bg-[#252525] transition-transform duration-300 ease-in-out md:static md:block z-10`}
+                    className={`${isSidebarOpen ? "translate-x-0" : "-translate-x-full"} md:translate-x-0 fixed top-0 left-0 w-64 h-full bg-[#252525] transition-transform duration-300 ease-in-out md:static md:block z-10`}
                     role='navigation'
                     aria-label='Dashboard navigation'>
-                    <Sidebar
-                        activeTab={activeTab}
-                        setActiveTab={handleTabSelect}
-                    />
+                    <Sidebar activeTab={activeTab} setActiveTab={handleTabSelect} />
                 </div>
 
                 {isSidebarOpen && (

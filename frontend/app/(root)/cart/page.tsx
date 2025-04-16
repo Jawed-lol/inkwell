@@ -11,7 +11,6 @@ import Head from "next/head"
 
 // Define types for cart items
 
-
 declare global {
     interface Window {
         gtag?: (command: string, action: string, params: object) => void
@@ -24,7 +23,6 @@ function CartPage() {
 
     useEffect(() => {
         setIsClient(true)
-        // Track page view with Google Analytics
         if (typeof window !== "undefined" && window.gtag) {
             window.gtag("event", "page_view", {
                 page_title: "Shopping Cart",
@@ -56,59 +54,51 @@ function CartPage() {
         0
     )
 
-
     const fadeIn = {
         hidden: { opacity: 0, y: 20 },
         visible: { opacity: 1, y: 0, transition: { duration: 0.6 } },
     }
     
-    // Generate structured data for SEO
-    const generateStructuredData = () => {
-        return {
-            "@context": "https://schema.org",
-            "@type": "ItemList",
-            itemListElement: cart.map((item, index) => ({
+    const generateStructuredData = () => ({
+        "@context": "https://schema.org",
+        "@type": "ItemList",
+        itemListElement: cart.map((item, index) => ({
+            "@type": "ListItem",
+            position: index + 1,
+            item: {
+                "@type": "Product",
+                name: item.title || "Unknown Title",
+                author: typeof item.author === 'string' 
+                    ? item.author 
+                    : (item.author?.name || "Unknown Author"),
+                offers: {
+                    "@type": "Offer",
+                    price: item.price,
+                    priceCurrency: "USD",
+                },
+            },
+        })),
+    })
+
+    const generateBreadcrumbData = () => ({
+        "@context": "https://schema.org",
+        "@type": "BreadcrumbList",
+        itemListElement: [
+            {
                 "@type": "ListItem",
-                position: index + 1,
-                item: {
-                    "@type": "Product",
-                    name: item.title || "Unknown Title",
-                    author: typeof item.author === 'string' 
-                        ? item.author 
-                        : (item.author?.name || "Unknown Author"),
-                    offers: {
-                        "@type": "Offer",
-                        price: item.price,
-                        priceCurrency: "USD",
-                    },
-                },
-            })),
-        }
-    }
+                position: 1,
+                name: "Home",
+                item: "https://inkwellbookstore.com"
+            },
+            {
+                "@type": "ListItem",
+                position: 2,
+                name: "Shopping Cart",
+                item: "https://inkwellbookstore.com/cart"
+            }
+        ]
+    })
 
-    // Generate breadcrumb structured data
-    const generateBreadcrumbData = () => {
-        return {
-            "@context": "https://schema.org",
-            "@type": "BreadcrumbList",
-            itemListElement: [
-                {
-                    "@type": "ListItem",
-                    position: 1,
-                    name: "Home",
-                    item: "https://inkwellbookstore.com"
-                },
-                {
-                    "@type": "ListItem",
-                    position: 2,
-                    name: "Shopping Cart",
-                    item: "https://inkwellbookstore.com/cart"
-                }
-            ]
-        }
-    }
-
-    // Loading state for SSR
     if (!isClient) {
         return (
             <main className='pt-[120px] bg-gradient-to-b from-charcoalBlack to-deepGray min-h-screen'>
@@ -137,7 +127,6 @@ function CartPage() {
                 <meta name="twitter:description" content="Review and manage your selected books before checkout." />
             </Head>
 
-            {/* Structured data script for SEO */}
             <script
                 type="application/ld+json"
                 dangerouslySetInnerHTML={{ 
@@ -145,7 +134,6 @@ function CartPage() {
                 }}
             />
             
-            {/* Breadcrumb structured data */}
             <script
                 type="application/ld+json"
                 dangerouslySetInnerHTML={{ 
@@ -303,7 +291,4 @@ function CartPage() {
     )
 }
 
-// Remove the generateMetadata export
-
-// Use dynamic import with no SSR for cart functionality
 export default dynamic(() => Promise.resolve(CartPage), { ssr: false })

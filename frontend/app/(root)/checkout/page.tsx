@@ -5,6 +5,7 @@ import { useAuth } from "@/context/AuthContext"
 import { useState } from "react"
 import { useRouter } from "next/navigation"
 import { motion } from "framer-motion"
+import Head from "next/head"
 
 type CheckoutError = {
     message: string
@@ -34,9 +35,8 @@ export default function CheckoutPage() {
         setError(null)
 
         try {
-            // Format cart items according to what the backend expects
             const orderItems = cart.map(item => ({
-                bookSlug: item.slug, // Backend expects 'bookSlug', not 'slug'
+                bookSlug: item.slug,
                 quantity: item.quantity,
                 price: item.price || 0
             }));
@@ -46,7 +46,7 @@ export default function CheckoutPage() {
             }
 
             const response = await fetch(
-                API_URL+"/api/orders",
+                `${API_URL}/api/orders`,
                 {
                     method: "POST",
                     headers: {
@@ -81,89 +81,130 @@ export default function CheckoutPage() {
         visible: { opacity: 1, y: 0, transition: { duration: 0.6 } },
     }
 
+    const generateStructuredData = () => ({
+        "@context": "https://schema.org",
+        "@type": "Order",
+        orderItem: cart.map((item) => ({
+            "@type": "Product",
+            name: item.title || "Unknown Title",
+            offers: {
+                "@type": "Offer",
+                price: item.price,
+                priceCurrency: "USD",
+                itemCondition: "https://schema.org/NewCondition",
+                availability: "https://schema.org/InStock",
+            },
+        })),
+        priceCurrency: "USD",
+        price: total.toFixed(2),
+    })
+
     return (
-        <div className='pt-[120px] bg-gradient-to-b from-charcoalBlack to-deepGray min-h-screen'>
-            <div className='max-w-[1200px] mx-auto px-6 sm:px-8 md:px-12 py-8'>
-                <motion.h1
-                    initial='hidden'
-                    animate='visible'
-                    variants={fadeIn}
-                    className='font-author text-warmBeige text-2xl sm:text-3xl md:text-4xl mb-8 text-center'>
-                    Checkout
-                </motion.h1>
+        <>
+            <Head>
+                <title>Checkout | Inkwell Bookstore</title>
+                <meta name="description" content="Secure checkout for your selected books. Confirm your order and enjoy your new reads." />
+                <meta name="robots" content="noindex, follow" />
+                <link rel="canonical" href="https://inkwellbookstore.com/checkout" />
+                <meta property="og:title" content="Checkout | Inkwell Bookstore" />
+                <meta property="og:description" content="Secure checkout for your selected books." />
+                <meta property="og:url" content="https://inkwellbookstore.com/checkout" />
+                <meta property="og:type" content="website" />
+                <meta name="twitter:card" content="summary" />
+                <meta name="twitter:title" content="Checkout | Inkwell Bookstore" />
+                <meta name="twitter:description" content="Secure checkout for your selected books." />
+            </Head>
 
-                {cart.length === 0 ? (
-                    <motion.p
+            <script
+                type="application/ld+json"
+                dangerouslySetInnerHTML={{ 
+                    __html: JSON.stringify(generateStructuredData()) 
+                }}
+            />
+
+            <main className='pt-[120px] bg-gradient-to-b from-charcoalBlack to-deepGray min-h-screen' aria-label="Checkout Page">
+                <div className='max-w-[1200px] mx-auto px-6 sm:px-8 md:px-12 py-8'>
+                    <motion.h1
                         initial='hidden'
                         animate='visible'
                         variants={fadeIn}
-                        className='text-mutedSand text-center text-base sm:text-lg'>
-                        Your cart is empty.{" "}
-                        <a
-                            href='/shop'
-                            className='text-burntAmber hover:text-deepCopper'>
-                            Shop now!
-                        </a>
-                    </motion.p>
-                ) : (
-                    <motion.div
-                        initial='hidden'
-                        animate='visible'
-                        variants={fadeIn}
-                        className='space-y-6'>
-                        <div className='bg-deepGray rounded-lg p-4'>
-                            <h2 className='font-author text-warmBeige text-lg sm:text-xl md:text-2xl mb-4'>
-                                Order Summary
-                            </h2>
-                            <ul className='space-y-4'>
-                                {cart.map((item) => (
-                                    <li
-                                        key={item.slug}
-                                        className='flex flex-col sm:flex-row justify-between items-center gap-2 sm:gap-4 border-b border-darkMocha pb-2'>
-                                        <span className='text-warmBeige font-generalSans'>
-                                            {item.title} ({item.quantity})
-                                        </span>
-                                        <span className='text-burntAmber font-bold'>
-                                            $
-                                            {item.price != null
-                                                ? (
-                                                      item.price * item.quantity
-                                                  ).toFixed(2)
-                                                : "N/A"}
-                                        </span>
-                                    </li>
-                                ))}
-                            </ul>
-                            <p className='font-author text-warmBeige text-lg sm:text-xl mt-4'>
-                                Total:{" "}
-                                <span className='text-burntAmber'>
-                                    ${total.toFixed(2)}
-                                </span>
-                            </p>
-                        </div>
+                        className='font-author text-warmBeige text-2xl sm:text-3xl md:text-4xl mb-8 text-center'>
+                        Checkout
+                    </motion.h1>
 
-                        <div className='flex flex-col sm:flex-row justify-center gap-4'>
-                            <button
-                                onClick={handleCheckout}
-                                disabled={loading}
-                                className='font-author font-bold text-sm md:text-base bg-burntAmber text-darkMutedTeal py-2 px-6 rounded-lg hover:bg-deepCopper transition duration-200 disabled:bg-mutedSand disabled:cursor-not-allowed w-full sm:w-auto'>
-                                {loading ? "Processing..." : "Confirm Order"}
-                            </button>
+                    {cart.length === 0 ? (
+                        <motion.p
+                            initial='hidden'
+                            animate='visible'
+                            variants={fadeIn}
+                            className='text-mutedSand text-center text-base sm:text-lg'>
+                            Your cart is empty.{" "}
                             <a
-                                href='/cart'
-                                className='font-author font-bold text-sm md:text-base bg-mutedSand text-charcoalBlack py-2 px-6 rounded-lg hover:bg-deepCopper hover:text-darkMutedTeal transition duration-200 text-center w-full sm:w-auto'>
-                                Back to Cart
+                                href='/shop'
+                                className='text-burntAmber hover:text-deepCopper focus:outline-none focus:ring-2 focus:ring-burntAmber focus:ring-offset-2 focus:ring-offset-deepGray'>
+                                Shop now!
                             </a>
-                        </div>
+                        </motion.p>
+                    ) : (
+                        <motion.div
+                            initial='hidden'
+                            animate='visible'
+                            variants={fadeIn}
+                            className='space-y-6'>
+                            <div className='bg-deepGray rounded-lg p-4'>
+                                <h2 className='font-author text-warmBeige text-lg sm:text-xl md:text-2xl mb-4'>
+                                    Order Summary
+                                </h2>
+                                <ul className='space-y-4' aria-label="Order Summary">
+                                    {cart.map((item) => (
+                                        <li
+                                            key={item.slug}
+                                            className='flex flex-col sm:flex-row justify-between items-center gap-2 sm:gap-4 border-b border-darkMocha pb-2'>
+                                            <span className='text-warmBeige font-generalSans'>
+                                                {item.title} ({item.quantity})
+                                            </span>
+                                            <span className='text-burntAmber font-bold'>
+                                                $
+                                                {item.price != null
+                                                    ? (
+                                                          item.price * item.quantity
+                                                      ).toFixed(2)
+                                                    : "N/A"}
+                                            </span>
+                                        </li>
+                                    ))}
+                                </ul>
+                                <p className='font-author text-warmBeige text-lg sm:text-xl mt-4'>
+                                    Total:{" "}
+                                    <span className='text-burntAmber'>
+                                        ${total.toFixed(2)}
+                                    </span>
+                                </p>
+                            </div>
 
-                        {error && (
-                            <p className='text-deepCopper text-center text-sm sm:text-base'>
-                                {error}
-                            </p>
-                        )}
-                    </motion.div>
-                )}
-            </div>
-        </div>
+                            <div className='flex flex-col sm:flex-row justify-center gap-4'>
+                                <button
+                                    onClick={handleCheckout}
+                                    disabled={loading}
+                                    className='font-author font-bold text-sm md:text-base bg-burntAmber text-darkMutedTeal py-2 px-6 rounded-lg hover:bg-deepCopper transition duration-200 disabled:bg-mutedSand disabled:cursor-not-allowed w-full sm:w-auto focus:outline-none focus:ring-2 focus:ring-burntAmber focus:ring-offset-2 focus:ring-offset-deepGray'>
+                                    {loading ? "Processing..." : "Confirm Order"}
+                                </button>
+                                <a
+                                    href='/cart'
+                                    className='font-author font-bold text-sm md:text-base bg-mutedSand text-charcoalBlack py-2 px-6 rounded-lg hover:bg-deepCopper hover:text-darkMutedTeal transition duration-200 text-center w-full sm:w-auto focus:outline-none focus:ring-2 focus:ring-burntAmber focus:ring-offset-2 focus:ring-offset-deepGray'>
+                                    Back to Cart
+                                </a>
+                            </div>
+
+                            {error && (
+                                <p className='text-deepCopper text-center text-sm sm:text-base'>
+                                    {error}
+                                </p>
+                            )}
+                        </motion.div>
+                    )}
+                </div>
+            </main>
+        </>
     )
 }

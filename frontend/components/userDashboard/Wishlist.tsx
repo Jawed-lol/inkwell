@@ -8,14 +8,8 @@ import Image from "next/image"
 import Head from "next/head"
 import { motion } from "framer-motion"
 import Link from "next/link"
+import { Book } from "@/types/book"
 
-interface Book {
-    slug: string
-    title: string
-    author: { name: string; _id: string }
-    price: number
-    urlPath?: string
-}
 
 export default function Wishlist() {
     const { user, token, loading } = useAuth()
@@ -62,6 +56,7 @@ export default function Wishlist() {
         // Placeholder for cart functionality
         console.log("Add to cart:", bookId)
     }
+    console.log(wishlist)
 
     // Schema.org structured data for SEO
     const schemaData = {
@@ -198,11 +193,14 @@ export default function Wishlist() {
                                     loading='lazy'
                                 />
                                 <div className='flex-1'>
-                                    <h2
-                                        id={`book-title-${book.slug}`}
-                                        className='text-warmBeige font-semibold text-lg'>
-                                        {book.title}
-                                    </h2>
+                                    
+                                    <Link href={`/book/${book.slug}`}>
+                                        <h2
+                                            id={`book-title-${book.slug}`}
+                                            className='text-warmBeige font-semibold text-lg'>
+                                            {book.title}
+                                        </h2>
+                                    </Link>
                                     <p className='text-mutedSand'>
                                         by{" "}
                                         {book.author.name || "Unknown Author"}

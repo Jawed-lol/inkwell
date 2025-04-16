@@ -98,7 +98,7 @@ router.post(
 // Profile GET
 router.get('/profile', authMiddleware, async (req, res) => {
   try {
-    const user = await User.findById(req.user.id).select('-password').populate('wishlist');
+    const user = await User.findById(req.user.id).select('-password').populate('wishlist', '_id title author').lean();
     
     if (!user) {
       return res.status(404).json({ success: false, message: 'User not found' });

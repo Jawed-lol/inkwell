@@ -4,7 +4,7 @@ import Image from "next/image"
 import Link from "next/link"
 import { useCart } from "@/context/CartContext"
 import { useState, useEffect } from "react"
-import { ShoppingCart } from "lucide-react"
+import { ShoppingCart, AlertCircle } from "lucide-react"
 
 interface BookCardProps {
     book: Book
@@ -30,6 +30,9 @@ export default function BookCard({ book }: BookCardProps) {
             setMessage("")
         }, 3000)
     }
+
+    // Check if book is in stock
+    const isInStock = book.stock === undefined || book.stock > 0
 
     return (
         <div className="relative">
@@ -58,6 +61,11 @@ export default function BookCard({ book }: BookCardProps) {
                         <div className="absolute top-2 right-2 bg-charcoalBlack bg-opacity-80 px-2 py-1 rounded text-warmBeige text-sm font-bold">
                             ${book.price.toFixed(2)}
                         </div>
+                        {!isInStock && (
+                            <div className="absolute bottom-0 left-0 right-0 bg-charcoalBlack bg-opacity-80 py-1 text-center text-warmBeige text-sm font-bold">
+                                Out of Stock
+                            </div>
+                        )}
                     </div>
                     <div className="p-4 flex flex-col flex-grow">
                         <h2 className="text-sm md:text-[16px] lg:text-lg leading-tight font-author font-bold text-warmBeige mb-2">
@@ -67,13 +75,20 @@ export default function BookCard({ book }: BookCardProps) {
                             {book.author?.name || "Unknown Author"}
                         </p>
                         <div className="mt-auto pt-3">
-                            <button
-                                onClick={handleAddToCart}
-                                className="font-author font-bold text-[10px] md:text-[12px] lg:text-sm bg-burntAmber hover:bg-deepCopper rounded-[8px] py-1 px-2 md:py-1.5 md:px-3 lg:py-2 lg:px-4 w-full text-darkMutedTeal transition-colors flex items-center justify-center gap-1 focus:outline-none focus:ring-2 focus:ring-burntAmber focus:ring-offset-1 focus:ring-offset-deepGray"
-                                aria-label={`Add ${book.title} to cart`}>
-                                <ShoppingCart size={16} aria-hidden="true" />
-                                Add to Cart
-                            </button>
+                            {isInStock ? (
+                                <button
+                                    onClick={handleAddToCart}
+                                    className="font-author font-bold text-[10px] md:text-[12px] lg:text-sm bg-burntAmber hover:bg-deepCopper rounded-[8px] py-1 px-2 md:py-1.5 md:px-3 lg:py-2 lg:px-4 w-full text-darkMutedTeal transition-colors flex items-center justify-center gap-1 focus:outline-none focus:ring-2 focus:ring-burntAmber focus:ring-offset-1 focus:ring-offset-deepGray"
+                                    aria-label={`Add ${book.title} to cart`}>
+                                    <ShoppingCart size={16} aria-hidden="true" />
+                                    Add to Cart
+                                </button>
+                            ) : (
+                                <div className="font-author font-bold text-[10px] md:text-[12px] lg:text-sm bg-gray-400 rounded-[8px] py-1 px-2 md:py-1.5 md:px-3 lg:py-2 lg:px-4 w-full text-darkMutedTeal flex items-center justify-center gap-1 cursor-not-allowed">
+                                    <AlertCircle size={16} aria-hidden="true" />
+                                    Out of Stock
+                                </div>
+                            )}
                         </div>
                     </div>
                 </motion.article>

@@ -3,13 +3,13 @@
 import { motion, AnimatePresence } from "framer-motion"
 import Image from "next/image"
 import { useCart } from "@/context/CartContext"
-import { XIcon } from "lucide-react"
+import { XIcon, ShoppingBag } from "lucide-react"
 import Link from "next/link"
+import { useRouter } from "next/navigation"
 import { useEffect, useState } from "react"
 import dynamic from "next/dynamic"
 import Head from "next/head"
-
-// Define types for cart items
+import { useAuth } from "@/context/AuthContext"
 
 declare global {
     interface Window {
@@ -19,7 +19,9 @@ declare global {
 
 function CartPage() {
     const { cart, updateQuantity, removeFromCart, clearCart } = useCart()
+    const { isAuthenticated } = useAuth()
     const [isClient, setIsClient] = useState(false)
+    const router = useRouter()
 
     useEffect(() => {
         setIsClient(true)
@@ -31,6 +33,15 @@ function CartPage() {
         }
     }, [])
 
+    // Function to handle checkout button click
+    const handleCheckout = () => {
+        if (!isAuthenticated) {
+            router.push(`/login?returnUrl=${encodeURIComponent('/checkout')}`)
+            return
+        }
+        router.push('/checkout')
+    }
+
     const handleIncreaseQuantity = (bookId: string) => {
         const item = cart.find((i) => i.slug === bookId)
         if (item) {
@@ -40,12 +51,10 @@ function CartPage() {
 
     const handleDecreaseQuantity = (bookId: string) => {
         const item = cart.find((i) => i.slug === bookId)
-        if (item) {
-            if (item.quantity > 1) {
-                updateQuantity(bookId, item.quantity - 1)
-            } else {
-                removeFromCart(bookId)
-            }
+        if (item && item.quantity > 1) {
+            updateQuantity(bookId, item.quantity - 1)
+        } else if (item) {
+            removeFromCart(bookId)
         }
     }
 
@@ -75,6 +84,7 @@ function CartPage() {
                     "@type": "Offer",
                     price: item.price,
                     priceCurrency: "USD",
+                    availability: "https://schema.org/InStock"
                 },
             },
         })),
@@ -103,9 +113,11 @@ function CartPage() {
         return (
             <main className='pt-[120px] bg-gradient-to-b from-charcoalBlack to-deepGray min-h-screen'>
                 <div className='max-w-[1200px] mx-auto px-6 sm:px-8 md:px-12 py-8'>
-                    <p className='text-warmBeige text-center'>
-                        Loading cart...
-                    </p>
+                    <div className="flex justify-center items-center h-40">
+                        <p className='text-warmBeige text-center' aria-live="polite">
+                            Loading your shopping cart...
+                        </p>
+                    </div>
                 </div>
             </main>
         )
@@ -162,101 +174,109 @@ function CartPage() {
                             </p>
                             <Link
                                 href='/shop'
-                                className='text-burntAmber hover:text-deepCopper inline-block font-author font-bold py-2 px-4 rounded-lg border border-burntAmber hover:border-deepCopper transition duration-200'>
+                                className='text-burntAmber hover:text-deepCopper inline-block font-author font-bold py-2 px-4 rounded-lg border border-burntAmber hover:border-deepCopper transition duration-200'
+                                aria-label="Browse our book collection">
+                                <ShoppingBag className="inline-block mr-2 h-5 w-5" aria-hidden="true" />
                                 Browse Our Book Collection
                             </Link>
                         </motion.div>
                     ) : (
                         <div className='space-y-6'>
-                            <section aria-label='Cart items'>
-                                <AnimatePresence>
-                                    {cart.map((item) => (
-                                        <motion.article
-                                            key={item.slug}
-                                            initial={{ opacity: 0, y: 20 }}
-                                            animate={{ opacity: 1, y: 0 }}
-                                            exit={{ opacity: 0, y: -20 }}
-                                            transition={{ duration: 0.3 }}
-                                            className='bg-deepGray rounded-lg p-4 flex flex-col sm:flex-row items-center justify-between gap-4'>
-                                            <div className='flex flex-col sm:flex-row items-center gap-4'>
-                                                <Image
-                                                    src={
-                                                        item.urlPath ||
-                                                        "/placeholder.svg"
-                                                    }
-                                                    alt={`Cover of ${item.title || "Unknown book"}`}
-                                                    width={100}
-                                                    height={150}
-                                                    className='rounded-lg object-cover w-[80px] h-[120px] sm:w-[100px] sm:h-[150px]'
-                                                    crossOrigin='anonymous'
-                                                    priority={true}
-                                                />
-                                                <div className='text-center sm:text-left'>
-                                                    <h2 className='font-author font-bold text-warmBeige text-lg md:text-xl'>
-                                                        {item.title ||
-                                                            "Unknown Title"}
-                                                    </h2>
-                                                    <p className='font-generalSans text-mutedSand text-sm md:text-base'>
-                                                        by{" "}
-                                                        {typeof item.author === 'string'
-                                                            ? item.author
-                                                            : (item.author?.name || "Unknown Author")}
-                                                    </p>
-                                                    <p className='font-generalSans text-burntAmber font-bold text-sm md:text-base'>
-                                                        $
-                                                        {item.price != null
-                                                            ? item.price.toFixed(
-                                                                  2
-                                                              )
-                                                            : "N/A"}
-                                                    </p>
-                                                </div>
-                                            </div>
-                                            <div className='flex items-center gap-4'>
-                                                <div
-                                                    className='flex items-center gap-2'
-                                                    role='group'
-                                                    aria-label={`Quantity controls for ${item.title}`}>
-                                                    <button
-                                                        onClick={() =>
-                                                            handleDecreaseQuantity(
-                                                                item.slug
-                                                            )
-                                                        }
-                                                        className={`bg-burntAmber text-darkMutedTeal font-generalSans font-bold w-8 h-8 rounded-full hover:bg-deepCopper transition duration-200`}
-                                                        aria-label={`Decrease quantity of ${item.title}`}>
-                                                        -
-                                                    </button>
-                                                    <span
-                                                        className='font-generalSans text-warmBeige text-lg'
-                                                        aria-live='polite'>
-                                                        {item.quantity}
-                                                    </span>
-                                                    <button
-                                                        onClick={() =>
-                                                            handleIncreaseQuantity(
-                                                                item.slug
-                                                            )
-                                                        }
-                                                        className='bg-burntAmber text-darkMutedTeal font-generalSans font-bold w-8 h-8 rounded-full hover:bg-deepCopper transition duration-200'
-                                                        aria-label={`Increase quantity of ${item.title}`}>
-                                                        +
-                                                    </button>
-                                                </div>
-                                                <button
-                                                    onClick={() =>
-                                                        removeFromCart(
-                                                            item.slug
-                                                        )
-                                                    }
-                                                    className='text-mutedSand hover:text-burntAmber transition duration-200'
-                                                    aria-label={`Remove ${item.title || "item"} from cart`}>
-                                                    <XIcon className='w-6 h-6' />
-                                                </button>
-                                            </div>
-                                        </motion.article>
-                                    ))}
-                                </AnimatePresence>
+                            <section 
+                                aria-label='Cart items'
+                                className="mb-6">
+                                <h2 className="sr-only">Items in your cart</h2>
+                                <ul className="space-y-4">
+                                    <AnimatePresence>
+                                        {cart.map((item) => (
+                                            <li key={item.slug}>
+                                                <motion.article
+                                                    initial={{ opacity: 0, y: 20 }}
+                                                    animate={{ opacity: 1, y: 0 }}
+                                                    exit={{ opacity: 0, y: -20 }}
+                                                    transition={{ duration: 0.3 }}
+                                                    className='bg-deepGray rounded-lg p-4 flex flex-col sm:flex-row items-center justify-between gap-4'>
+                                                    <div className='flex flex-col sm:flex-row items-center gap-4'>
+                                                        <Image
+                                                            src={
+                                                                item.urlPath ||
+                                                                "/placeholder.svg"
+                                                            }
+                                                            alt={`Cover of ${item.title || "Unknown book"}`}
+                                                            width={100}
+                                                            height={150}
+                                                            className='rounded-lg object-cover w-[80px] h-[120px] sm:w-[100px] sm:h-[150px]'
+                                                            crossOrigin='anonymous'
+                                                            priority={true}
+                                                        />
+                                                        <div className='text-center sm:text-left'>
+                                                            <h3 className='font-author font-bold text-warmBeige text-lg md:text-xl'>
+                                                                {item.title ||
+                                                                    "Unknown Title"}
+                                                            </h3>
+                                                            <p className='font-generalSans text-mutedSand text-sm md:text-base'>
+                                                                by{" "}
+                                                                {typeof item.author === 'string'
+                                                                    ? item.author
+                                                                    : (item.author?.name || "Unknown Author")}
+                                                            </p>
+                                                            <p className='font-generalSans text-burntAmber font-bold text-sm md:text-base'>
+                                                                $
+                                                                {item.price != null
+                                                                    ? item.price.toFixed(
+                                                                          2
+                                                                      )
+                                                                    : "N/A"}
+                                                            </p>
+                                                        </div>
+                                                    </div>
+                                                    <div className='flex items-center gap-4'>
+                                                        <div
+                                                            className='flex items-center gap-2'
+                                                            role='group'
+                                                            aria-label={`Quantity controls for ${item.title}`}>
+                                                            <button
+                                                                onClick={() =>
+                                                                    handleDecreaseQuantity(
+                                                                        item.slug
+                                                                    )
+                                                                }
+                                                                className='bg-burntAmber text-darkMutedTeal font-generalSans font-bold w-8 h-8 rounded-full hover:bg-deepCopper transition duration-200'
+                                                                aria-label={`Decrease quantity of ${item.title}`}>
+                                                                -
+                                                            </button>
+                                                            <span
+                                                                className='font-generalSans text-warmBeige text-lg'
+                                                                aria-live='polite'>
+                                                                {item.quantity}
+                                                            </span>
+                                                            <button
+                                                                onClick={() =>
+                                                                    handleIncreaseQuantity(
+                                                                        item.slug
+                                                                    )
+                                                                }
+                                                                className='bg-burntAmber text-darkMutedTeal font-generalSans font-bold w-8 h-8 rounded-full hover:bg-deepCopper transition duration-200'
+                                                                aria-label={`Increase quantity of ${item.title}`}>
+                                                                +
+                                                            </button>
+                                                        </div>
+                                                        <button
+                                                            onClick={() =>
+                                                                removeFromCart(
+                                                                    item.slug
+                                                                )
+                                                            }
+                                                            className='text-mutedSand hover:text-burntAmber transition duration-200'
+                                                            aria-label={`Remove ${item.title || "item"} from cart`}>
+                                                            <XIcon className='w-6 h-6' />
+                                                        </button>
+                                                    </div>
+                                                </motion.article>
+                                            </li>
+                                        ))}
+                                    </AnimatePresence>
+                                </ul>
                             </section>
 
                             <motion.div
@@ -273,14 +293,16 @@ function CartPage() {
                                 <div className='flex flex-col sm:flex-row gap-4 w-full sm:w-auto'>
                                     <button
                                         onClick={clearCart}
-                                        className='font-author font-bold text-sm md:text-base bg-mutedSand text-charcoalBlack py-2 px-4 rounded-lg hover:bg-deepCopper hover:text-darkMutedTeal transition duration-200 w-full sm:w-auto'>
+                                        className='font-author font-bold text-sm md:text-base bg-mutedSand text-charcoalBlack py-2 px-4 rounded-lg hover:bg-deepCopper hover:text-darkMutedTeal transition duration-200 w-full sm:w-auto'
+                                        aria-label="Clear all items from cart">
                                         Clear Cart
                                     </button>
-                                    <Link
-                                        href='/checkout'
-                                        className='font-author font-bold text-sm md:text-base bg-burntAmber text-darkMutedTeal py-2 px-4 rounded-lg hover:bg-deepCopper transition duration-200 w-full sm:w-auto text-center inline-block'>
-                                        Proceed to Checkout
-                                    </Link>
+                                    <button
+                                        onClick={handleCheckout}
+                                        className='font-author font-bold text-sm md:text-base bg-burntAmber text-darkMutedTeal py-2 px-4 rounded-lg hover:bg-deepCopper transition duration-200 w-full sm:w-auto text-center'
+                                        aria-label={isAuthenticated ? "Proceed to checkout" : "Login to continue to checkout"}>
+                                        {isAuthenticated ? 'Proceed to Checkout' : 'Login to Checkout'}
+                                    </button>
                                 </div>
                             </motion.div>
                         </div>

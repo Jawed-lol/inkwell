@@ -220,6 +220,18 @@ export const wishlistService = {
         }
     },
 
+    // Add this alias for the get method
+    getAll: async (token: string): Promise<Book[]> => {
+        try {
+            const { data } = await apiClient.get<Book[]>("/auth/wishlist", {
+                headers: getAuthHeaders(token),
+            })
+            return data
+        } catch (error) {
+            return handleError(error, "Failed to fetch wishlist")
+        }
+    },
+
     remove: async (
         token: string,
         bookSlug: string

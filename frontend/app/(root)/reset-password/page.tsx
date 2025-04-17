@@ -2,14 +2,15 @@
 
 import Image from "next/image"
 import Link from "next/link"
-import { useState, useEffect } from "react"
+import { useState, useEffect, Suspense } from "react"
 import { useRouter, useSearchParams } from "next/navigation"
 import { authService } from "@/lib/api"
 import { useAuth } from "@/context/AuthContext"
 import { motion, useReducedMotion } from "framer-motion"
 import { Eye, EyeOff } from "lucide-react"
 
-export default function ResetPassword() {
+// Create a client component that uses useSearchParams
+function ResetPasswordForm() {
     const [password, setPassword] = useState("")
     const [confirmPassword, setConfirmPassword] = useState("")
     const [token, setToken] = useState<string | null>(null)
@@ -347,5 +348,32 @@ export default function ResetPassword() {
                 </motion.section>
             </main>
         </>
+    )
+}
+
+// Loading fallback component
+function ResetPasswordLoading() {
+    return (
+        <main className='bg-charcoalBlack flex items-center justify-center py-20 min-h-screen lg:py-24'>
+            <div className="p-6 max-w-[480px] bg-deepGray rounded-2xl md:p-8 lg:p-12 w-full shadow-[0px_8px_24px_rgba(0,_0,_0,_0.3)]">
+                <div className="flex flex-col items-center justify-center">
+                    <div className="w-[150px] h-[50px] bg-slightlyLightGrey/20 rounded mb-6 animate-pulse"></div>
+                    <div className="w-3/4 h-6 bg-slightlyLightGrey/20 rounded mb-4 animate-pulse"></div>
+                    <div className="w-full h-4 bg-slightlyLightGrey/20 rounded mb-6 animate-pulse"></div>
+                    <div className="w-full h-10 bg-slightlyLightGrey/20 rounded mb-4 animate-pulse"></div>
+                    <div className="w-full h-10 bg-slightlyLightGrey/20 rounded mb-6 animate-pulse"></div>
+                    <div className="w-full h-10 bg-slightlyLightGrey/20 rounded animate-pulse"></div>
+                </div>
+            </div>
+        </main>
+    )
+}
+
+// Main component that wraps the form with Suspense
+export default function ResetPassword() {
+    return (
+        <Suspense fallback={<ResetPasswordLoading />}>
+            <ResetPasswordForm />
+        </Suspense>
     )
 }

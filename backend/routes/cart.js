@@ -17,7 +17,7 @@ const transformCartItems = async (cartItems) => {
   }
 
   // Extract valid book slugs
-  const bookSlugs = cartItems.map(item => item.slug).filter(Boolean);
+  const bookSlugs = cartItems.map(item => item.slug || item.bookSlug).filter(Boolean);
   
   if (!bookSlugs.length) {
     return [];
@@ -57,12 +57,13 @@ const transformCartItems = async (cartItems) => {
     // Transform cart items with book details
     return cartItems
       .map(item => {
-        if (!item.slug) return null;
+        const slug = item.slug || item.bookSlug; // <-- FIX: support both
+        if (!slug) return null;
         
-        const book = bookMap.get(item.slug);
+        const book = bookMap.get(slug);
         
         if (!book) {
-          return createPlaceholderItem(item);
+          return createPlaceholderItem({ ...item, slug });
         }
         
         return {
@@ -160,27 +161,29 @@ router.put(
 
     try {
       const { items } = req.body;
-      const user = await User.findById(req.user.id);
-      if (!user) {
-        return res.status(404).json({ message: 'User not found' });
-      }
 
       // Filter valid items
       const validItems = items
         .filter(item => item.slug && typeof item.slug === 'string' && item.slug.trim() !== '')
         .map(item => ({
-          slug: item.slug,
+          bookSlug: item.slug,
           quantity: item.quantity,
         }));
 
-      // Update user's cart
-      user.cart = validItems;
-      await user.save();
+      // Atomically update user's cart
+      const user = await User.findByIdAndUpdate(
+        req.user.id,
+        { cart: validItems },
+        { new: true }
+      );
+      if (!user) {
+        return res.status(404).json({ message: 'User not found' });
+      }
 
       // Transform and return valid cart items
       const transformedItems = await transformCartItems(validItems);
-      
-      res.json({ 
+
+      res.json({
         items: transformedItems.length ? transformedItems : validItems.map(createPlaceholderItem)
       });
     } catch (error) {

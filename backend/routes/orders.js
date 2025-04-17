@@ -29,26 +29,18 @@ router.post(
       }
 
       const { items } = req.body;
-      const bookSlugs = items.map((item) => item.bookSlug);
-      
+      const bookSlugs = items.map(item => item.bookSlug);
+
       // Fetch all books in one query
       const books = await Book.find({ slug: { $in: bookSlugs } }).lean();
-      
-      // Create a map for O(1) lookups
-      const bookMap = new Map(books.map((book) => [book.slug, book]));
+      const bookMap = new Map(books.map(book => [book.slug, book]));
 
       // Validate all items before making any changes
-      const validatedItems = items.map((item) => {
+      const validatedItems = items.map(item => {
         const book = bookMap.get(item.bookSlug);
-        if (!book) {
-          throw new Error(`Book with slug ${item.bookSlug} not found`);
-        }
-        if (book.price !== item.price) {
-          throw new Error(`Price mismatch for book ${item.bookSlug}`);
-        }
-        if (book.stock < item.quantity) {
-          throw new Error(`Insufficient stock for book ${item.bookSlug}`);
-        }
+        if (!book) throw new Error(`Book with slug ${item.bookSlug} not found`);
+        if (book.price !== item.price) throw new Error(`Price mismatch for book ${item.bookSlug}`);
+        if (book.stock < item.quantity) throw new Error(`Insufficient stock for book ${item.bookSlug}`);
         return {
           bookSlug: item.bookSlug,
           quantity: item.quantity,
@@ -63,7 +55,6 @@ router.post(
           update: { $inc: { stock: -item.quantity } }
         }
       }));
-      
       await Book.bulkWrite(bulkOps);
 
       // Calculate total and create order
@@ -76,21 +67,18 @@ router.post(
       };
 
       // Clear only ordered items from cart
-      const orderedSlugs = new Set(validatedItems.map((item) => item.bookSlug));
-      user.cart = user.cart.filter((cartItem) => !orderedSlugs.has(cartItem.bookSlug));
+      const orderedSlugs = new Set(validatedItems.map(item => item.bookSlug));
+      user.cart = user.cart.filter(cartItem => !orderedSlugs.has(cartItem.bookSlug));
       user.orders.push(order);
       await user.save();
 
       res.status(201).json({ success: true, message: 'Order placed successfully', data: order });
     } catch (error) {
       console.error('Order creation error:', error.message, error.stack);
-      
-      // Determine appropriate status code based on error message
-      const statusCode = 
+      const statusCode =
         error.message.includes('not found') ? 404 :
         error.message.includes('mismatch') || error.message.includes('stock') ? 400 : 
         500;
-        
       res.status(statusCode).json({
         success: false,
         message: error.message || 'Failed to create order',
@@ -116,7 +104,7 @@ router.get('/', authMiddleware, async (req, res) => {
     // Get unique book slugs from orders for the current page only
     const bookSlugs = new Set();
     const paginatedOrders = user.orders.slice(startIndex, endIndex);
-    
+
     paginatedOrders.forEach(order => {
       order.items.forEach(item => {
         if (item.bookSlug) {
@@ -129,7 +117,7 @@ router.get('/', authMiddleware, async (req, res) => {
     const books = await Book.find({ 
       slug: { $in: Array.from(bookSlugs) } 
     }).populate('author', 'name').lean();
-    
+
     const bookMap = new Map(books.map(book => [book.slug, book]));
 
     // Enrich orders with book details

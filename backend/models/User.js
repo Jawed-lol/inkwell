@@ -25,6 +25,19 @@ const UserSchema = new Schema({
   resetPasswordExpires: {
     type: Date
   },
+  cart: [
+    {
+      bookSlug: {
+        type: String,
+        required: true
+      },
+      quantity: {
+        type: Number,
+        required: true,
+        default: 1
+      }
+    }
+  ],
   wishlist: [{
     type: Schema.Types.ObjectId,
     ref: 'Book'

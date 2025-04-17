@@ -160,6 +160,34 @@ export const authService = {
             throw error; // Re-throw to be caught by the calling component
         }
     },
+    
+    // Update the password reset endpoints to match our new routes
+    requestPasswordReset: async (email: string): Promise<{success: boolean, message?: string}> => {
+        try {
+            const { data } = await apiClient.post("/password/forgot-password", { email });
+            return data;
+        } catch (error) {
+            if (error instanceof AxiosError && error.response) {
+                throw new Error(error.response.data.message || "Failed to request password reset");
+            }
+            throw new Error("Failed to request password reset");
+        }
+    },
+    
+    resetPassword: async (token: string, newPassword: string): Promise<{success: boolean, message?: string}> => {
+        try {
+            const { data } = await apiClient.post("/password/reset-password", { 
+                token, 
+                newPassword 
+            });
+            return data;
+        } catch (error) {
+            if (error instanceof AxiosError && error.response) {
+                throw new Error(error.response.data.message || "Failed to reset password");
+            }
+            throw new Error("Failed to reset password");
+        }
+    }
 }
 
 export const bookService = {

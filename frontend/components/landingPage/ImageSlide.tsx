@@ -1,7 +1,7 @@
 "use client";
 
 import { motion } from "framer-motion";
-import Image from "next/image";
+import { Image } from '@imagekit/next';
 
 type ImageSliderProps = {
   imageSlider: {src: string, alt: string}[];
@@ -20,6 +20,7 @@ const ImageSlide = ({ imageSlider }: ImageSliderProps) => {
     >
       {imageSlider.map((image, index) => (
         <Image
+        urlEndpoint="https://ik.imagekit.io/25fqnetuz"
           key={index}
           src={image.src}
           alt={image.alt}

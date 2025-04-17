@@ -207,6 +207,7 @@ export default function BookPage() {
                     price={book.price}
                     urlPath={book.urlPath}
                     rating={avgRating}
+                    stock={book.stock}
                     onAddToCart={handleAddToCart}
                 />
                 <BookDetailsSectionProduct {...bookDetails} />

@@ -6,6 +6,7 @@ const morgan = require('morgan');
 const compression = require('compression');
 const rateLimit = require('express-rate-limit');
 const reviewRoutes = require('./routes/reviewRoutes');
+const passwordResetRoutes = require('./routes/passwordReset');
 require('dotenv').config();
 
 // Initialize express app
@@ -84,6 +85,8 @@ mongoose.connect(process.env.MONGO_URI, {
 
 // API Routes
 app.use('/api/auth', require('./routes/auth'));
+// Make sure this route is properly set up in the API Routes section
+app.use('/api/password', passwordResetRoutes);
 app.use('/api/books', require('./routes/books'));
 app.use('/api/cart', require('./routes/cart'));
 app.use('/api/orders', require('./routes/orders'));

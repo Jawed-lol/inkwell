@@ -351,4 +351,116 @@ router.get('/orders', authMiddleware, async (req, res) => {
   }
 });
 
+// Remove the import for email service at line 390
+// const { sendPasswordResetEmail } = require('../services/emailService');
+
+// Remove the entire Forgot Password and Reset Password routes from auth.js
+// since they're now in passwordReset.js
+router.post(
+  '/forgot-password',
+  [
+    body('email').trim().isEmail().normalizeEmail().withMessage('Invalid email format'),
+  ],
+  async (req, res) => {
+    const validationError = handleValidationErrors(req, res);
+    if (validationError) return;
+
+    const { email } = req.body;
+    try {
+      const user = await User.findOne({ email });
+      if (!user) {
+        // For security reasons, don't reveal if email exists or not
+        return res.status(200).json({ 
+          success: true, 
+          message: 'If your email is registered, you will receive password reset instructions shortly' 
+        });
+      }
+      
+      // Generate a reset token
+      const resetToken = jwt.sign(
+        { id: user._id },
+        process.env.JWT_SECRET,
+        { expiresIn: '1h' }
+      );
+      
+      // Save the reset token and expiry to the user document
+      user.resetPasswordToken = resetToken;
+      user.resetPasswordExpires = Date.now() + 3600000; // 1 hour
+      await user.save();
+      
+      // At the top of your file
+      const { sendPasswordResetEmail } = require('../services/emailService');
+      
+      // In your forgot-password route
+      // After generating and saving the reset token
+      await sendPasswordResetEmail(email, resetToken);
+      
+      // In a real application, you would send an email with the reset link
+      // For now, we'll just log it to the console
+      console.log(`Reset token for ${email}: ${resetToken}`);
+      console.log(`Reset link: ${process.env.FRONTEND_URL}/reset-password?token=${resetToken}`);
+      
+      // Return success response
+      res.status(200).json({ 
+        success: true, 
+        message: 'If your email is registered, you will receive password reset instructions shortly' 
+      });
+    } catch (error) {
+      console.error('Forgot password error:', error.message, error.stack);
+      res.status(500).json({ success: false, message: 'Failed to process password reset request' });
+    }
+  }
+);
+
+// Reset Password
+router.post(
+  '/reset-password',
+  [
+    body('token').notEmpty().withMessage('Reset token is required'),
+    body('newPassword').isLength({ min: 6 }).withMessage('Password must be at least 6 characters'),
+  ],
+  async (req, res) => {
+    const validationError = handleValidationErrors(req, res);
+    if (validationError) return;
+
+    const { token, newPassword } = req.body;
+    try {
+      // Verify the token
+      let decoded;
+      try {
+        decoded = jwt.verify(token, process.env.JWT_SECRET);
+      } catch (err) {
+        return res.status(400).json({ success: false, message: 'Invalid or expired reset token' });
+      }
+      
+      // Find the user with the token and check if token is expired
+      const user = await User.findOne({
+        _id: decoded.id,
+        resetPasswordToken: token,
+        resetPasswordExpires: { $gt: Date.now() }
+      });
+      
+      if (!user) {
+        return res.status(400).json({ success: false, message: 'Invalid or expired reset token' });
+      }
+      
+      // Hash the new password
+      const salt = await bcrypt.genSalt(10);
+      const hashedPassword = await bcrypt.hash(newPassword, salt);
+      
+      // Update the user's password and clear the reset token fields
+      user.password = hashedPassword;
+      user.resetPasswordToken = undefined;
+      user.resetPasswordExpires = undefined;
+      await user.save();
+      
+      // Return success response
+      res.status(200).json({ success: true, message: 'Password has been reset successfully' });
+    } catch (error) {
+      console.error('Reset password error:', error.message, error.stack);
+      res.status(500).json({ success: false, message: 'Failed to reset password' });
+    }
+  }
+);
+
 module.exports = router;

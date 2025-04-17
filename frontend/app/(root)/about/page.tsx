@@ -3,7 +3,7 @@
 import { motion } from "framer-motion"
 import Head from "next/head"
 import Link from "next/link"
-import Image from "next/image"
+import { Image } from "@imagekit/next"
 
 // Animation variants for sections
 const sectionVariants = {
@@ -180,21 +180,21 @@ function MeetTheTeamSection() {
         {
             name: "Eleanor Page",
             role: "Founder & CEO",
-            image: "/images/women1.png",
+            image: "/Inkwell/person-2.png",
             bio: "Eleanor started Inkwell in 2010 with a dream of bringing people together through stories. With a background in literature and a passion for community building, she's the heart of our bookstore, always ready to chat about her latest favorite novel or plan the next big event.",
             alt: "Eleanor Page, Founder of Inkwell Bookstore, smiling with glasses in front of bookshelves with warm lighting",
         },
         {
             name: "Marcus Reed",
             role: "Lead Bookseller",
-            image: "/images/man.png",
+            image: "/Inkwell/person-1.png",
             bio: "Marcus is our go-to guy for book recommendations. With over ten years in the book industry, he's got an uncanny ability to match readers with their perfect read. When he's not shelving books, you'll find him sharing fun facts about classic literature.",
             alt: "Marcus Reed, Lead Bookseller at Inkwell Bookstore, cheerfully holding a stack of books while talking to a customer",
         },
         {
             name: "Lily Harper",
             role: "Events Coordinator",
-            image: "/images/women2.png",
+            image: "/Inkwell/person-3.png",
             bio: "Lily keeps Inkwell buzzing with excitement. From organizing book clubs to hosting author signings, she brings creativity and energy to every event. Her love for storytelling and connecting with people makes every gathering unforgettable.",
             alt: "Lily Harper, Events Coordinator at Inkwell Bookstore, arranging a colorful display table for a book club",
         },
@@ -220,6 +220,7 @@ function MeetTheTeamSection() {
                         className='bg-slightlyLightGrey p-6 rounded-lg shadow-md'
                         aria-labelledby={`team-member-${index}`}>
                         <Image
+                            urlEndpoint="https://ik.imagekit.io/25fqnetuz"
                             src={member.image}
                             alt={member.alt}
                             width={150}

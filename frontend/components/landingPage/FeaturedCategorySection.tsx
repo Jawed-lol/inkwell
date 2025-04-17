@@ -7,22 +7,22 @@ import { motion } from "framer-motion";
 const featuredCategories = [
   {
     name: "Fiction",
-    urlPath: "/images/category-image.jpg",
+    urlPath: "/Inkwell/category-image.jpg",
     description: "Explore a world of imagination with our fiction collection featuring bestselling novels and classic literature.",
   },
   {
     name: "Romance",
-    urlPath: "/images/romance-cover-image.jpg",
+    urlPath: "/Inkwell/category-card-2.jpg",
     description: "Fall in love with our curated romance novels from contemporary to historical love stories.",
   },
   {
     name: "Mystery",
-    urlPath: "/images/mystery-thriller-cover-image.jpg",
+    urlPath: "/Inkwell/mystery-thriller-cover-image.jpg",
     description: "Unravel intriguing plots with our mystery books from cozy mysteries to thrilling detective stories.",
   },
   {
     name: "Fantasy",
-    urlPath: "/images/fiction-cover-image.jpg",
+    urlPath: "/Inkwell/fiction-cover-image.jpg",
     description: "Embark on magical adventures with our fantasy series featuring dragons, wizards, and mythical worlds.",
   },
 ];
@@ -54,7 +54,23 @@ const FeaturedCategorySection = () => {
       className="w-full bg-[#1B1B1B] py-16 md:py-20 lg:py-24"
       aria-labelledby="collections-heading"
     >
-
+      <motion.div
+        variants={sectionVariants}
+        initial="hidden"
+        whileInView="visible"
+        viewport={{ once: true, margin: "-100px" }}
+        
+      >
+                <h2
+            id="collections-heading"
+            className={
+              "font-authorSans text-[#EAE0D5] font-bold text-center text-[28px] md:text-[32px] lg:text-[36px]" +
+              "leading-[1.2] tracking-wide mb-8 md:mb-10 lg:mb-12"
+            }
+          >
+            Explore Our Collections
+          </h2>
+          </motion.div>
 
       {/* Category Cards Grid with Animation */}
       <motion.div
@@ -67,16 +83,6 @@ const FeaturedCategorySection = () => {
           "md:px-8 lg:px-12"
         }
       >
-              {/* Section Heading */}
-          <h2
-            id="collections-heading"
-            className={
-              "font-authorSans text-[#EAE0D5] font-bold text-center text-[28px] md:text-[32px] lg:text-[36px] " +
-              "leading-[1.2] tracking-wide mb-8 md:mb-10 lg:mb-12"
-            }
-          >
-            Explore Our Collections
-          </h2>
 
         {featuredCategories.map((category, index) => (
           <motion.div 

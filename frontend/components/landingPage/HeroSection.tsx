@@ -13,35 +13,35 @@ const ImageSlide = dynamic(
 // Add descriptive alt text for each image
 const imageSlider = [
     {
-        src: "/images/hero-book-cover.jpg",
+        src: "/Inkwell/bookCover-1.jpg",
         alt: "Featured book: The Silent Echo by Sarah Johnson"
     },
     {
-        src: "/images/hero-book-cover-1.jpg",
+        src: "/Inkwell/bookCover-2.jpg",
         alt: "Featured book: Midnight Dreams by Michael Roberts"
     },
     {
-        src: "/images/hero-book-cover-2.jpg",
+        src: "/Inkwell/bookCover-3.jpg",
         alt: "Featured book: The Lost Garden by Emily Chen"
     },
     {
-        src: "/images/hero-book-cover-3.jpg",
+        src: "/Inkwell/bookCover-4.jpg",
         alt: "Featured book: Beyond the Horizon by David Wilson"
     },
     {
-        src: "/images/hero-book-cover-4.jpg",
+        src: "/Inkwell/bookCover-5.jpg",
         alt: "Featured book: Whispers in the Dark by Sophia Martinez"
     },
     {
-        src: "/images/hero-book-cover-5.jpg",
+        src: "/Inkwell/bookCover-6.jpg",
         alt: "Featured book: The Last Journey by James Thompson"
     },
     {
-        src: "/images/hero-book-cover-6.jpg",
+        src: "/Inkwell/bookCover-7.jpg",
         alt: "Featured book: Eternal Flames by Rebecca Anderson"
     },
     {
-        src: "/images/hero-book-cover-7.jpg",
+        src: "/Inkwell/bookCover-8.jpg",
         alt: "Featured book: The Hidden Truth by Thomas Parker"
     },
 ]

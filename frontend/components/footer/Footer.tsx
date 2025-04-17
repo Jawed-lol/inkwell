@@ -7,7 +7,7 @@ import {
     FaStripe,
     FaCcMastercard,
 } from "react-icons/fa"
-import Image from "next/image"
+import { Image } from "@imagekit/next"
 
 // Define links in a more structured way for better maintainability
 const quickLinks = [
@@ -40,7 +40,8 @@ const Footer = () => {
                     <div>
                         <Link href="/" aria-label="Go to Inkwell Bookstore homepage">
                             <Image
-                                src='/images/weblogo.png'
+                                urlEndpoint="https://ik.imagekit.io/25fqnetuz"
+                                src='/Inkwell/weblogo.png'
                                 alt='Inkwell Bookstore'
                                 height={48}
                                 width={48}
@@ -158,7 +159,7 @@ const Footer = () => {
                         "@type": "Organization",
                         "name": "Inkwell Bookstore",
                         "url": "https://inkwell-bookstore.com",
-                        "logo": "https://inkwell-bookstore.com/images/weblogo.png",
+                        "logo": "https://ik.imagekit.io/25fqnetuz/Inkwell/weblogo.png?updatedAt=1744854182442",
                         "contactPoint": {
                             "@type": "ContactPoint",
                             "telephone": "+1-123-456-7890",

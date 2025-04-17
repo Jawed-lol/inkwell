@@ -1,6 +1,6 @@
 "use client"
 
-import Image from "next/image"
+import { Image } from "@imagekit/next"  
 import { Button } from "@/components/ui/button"
 import { MenuIcon, ShoppingCart, User } from "lucide-react"
 import Link from "next/link"
@@ -93,7 +93,8 @@ const Navbar = () => {
                             className='flex items-center'
                             aria-label='Inkwell Home'>
                             <Image
-                                src='/images/weblogo.png'
+                                urlEndpoint="https://ik.imagekit.io/25fqnetuz"
+                                src='/Inkwell/weblogo.png'
                                 alt='Inkwell Logo'
                                 width={90}
                                 height={90}
